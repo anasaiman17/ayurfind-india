@@ -1,3 +1,14 @@
+import tulsiImg from '@/assets/plants/tulsi.jpg';
+import neemImg from '@/assets/plants/neem.jpg';
+import ashwagandhaImg from '@/assets/plants/ashwagandha.jpg';
+import brahmiImg from '@/assets/plants/brahmi.jpg';
+import turmericImg from '@/assets/plants/turmeric.jpg';
+import aloeVeraImg from '@/assets/plants/aloe-vera.jpg';
+import amlaImg from '@/assets/plants/amla.jpg';
+import giloyImg from '@/assets/plants/giloy.jpg';
+import moringaImg from '@/assets/plants/moringa.jpg';
+import gingerImg from '@/assets/plants/ginger.jpg';
+
 export interface PlantData {
   id: string;
   scientificName: string;
@@ -68,10 +79,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Siddha", "Folk Medicine"],
     distribution: ["Throughout India", "Nepal", "Bangladesh", "Sri Lanka"],
     habitat: "Tropical and subtropical regions, commonly grown in home gardens",
-    imageUrl: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600"
-    ],
+    imageUrl: tulsiImg,
+    referenceImages: [tulsiImg],
     botanicalFeatures: {
       leafShape: "Oval to elliptical with serrated margins",
       leafTexture: "Slightly hairy, aromatic",
@@ -114,10 +123,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Siddha", "Unani", "Folk Medicine"],
     distribution: ["Throughout India", "Southeast Asia", "Africa"],
     habitat: "Tropical and semi-tropical regions, drought resistant",
-    imageUrl: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=600"
-    ],
+    imageUrl: neemImg,
+    referenceImages: [neemImg],
     botanicalFeatures: {
       leafShape: "Pinnate compound leaves with serrated leaflets",
       leafTexture: "Smooth, glossy dark green",
@@ -160,10 +167,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Unani"],
     distribution: ["Western India", "Central India", "Pakistan", "Sri Lanka"],
     habitat: "Dry regions, sandy soils, up to 1500m altitude",
-    imageUrl: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=600"
-    ],
+    imageUrl: ashwagandhaImg,
+    referenceImages: [ashwagandhaImg],
     botanicalFeatures: {
       leafShape: "Oval, alternate leaves",
       leafTexture: "Velvety, tomentose",
@@ -206,10 +211,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Siddha"],
     distribution: ["Throughout India", "Nepal", "Sri Lanka", "China"],
     habitat: "Wetlands, marshy areas, riverbanks",
-    imageUrl: "https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=600"
-    ],
+    imageUrl: brahmiImg,
+    referenceImages: [brahmiImg],
     botanicalFeatures: {
       leafShape: "Succulent, oblong leaves",
       leafTexture: "Fleshy, smooth",
@@ -252,10 +255,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Siddha", "Unani", "Folk Medicine"],
     distribution: ["Throughout India", "Southeast Asia"],
     habitat: "Tropical regions, requires well-drained soil and humid climate",
-    imageUrl: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=600"
-    ],
+    imageUrl: turmericImg,
+    referenceImages: [turmericImg],
     botanicalFeatures: {
       leafShape: "Long, oblong leaves",
       leafTexture: "Smooth, glossy",
@@ -298,10 +299,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Siddha", "Folk Medicine"],
     distribution: ["Throughout India", "Arabian Peninsula", "Africa"],
     habitat: "Arid and semi-arid regions, well-drained sandy soil",
-    imageUrl: "https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?w=600"
-    ],
+    imageUrl: aloeVeraImg,
+    referenceImages: [aloeVeraImg],
     botanicalFeatures: {
       leafShape: "Thick, fleshy, lance-shaped with serrated edges",
       leafTexture: "Succulent, gel-filled",
@@ -344,10 +343,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Siddha", "Unani"],
     distribution: ["Throughout India", "Nepal", "Sri Lanka", "Southeast Asia"],
     habitat: "Tropical and subtropical regions, deciduous forests",
-    imageUrl: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=600"
-    ],
+    imageUrl: amlaImg,
+    referenceImages: [amlaImg],
     botanicalFeatures: {
       leafShape: "Small, feathery, linear-oblong",
       leafTexture: "Smooth, closely set",
@@ -390,10 +387,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Siddha", "Folk Medicine"],
     distribution: ["Throughout India", "Sri Lanka", "Myanmar"],
     habitat: "Tropical regions, grows on trees as a climber",
-    imageUrl: "https://images.unsplash.com/photo-1470058869958-2a77ade41c02?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1470058869958-2a77ade41c02?w=600"
-    ],
+    imageUrl: giloyImg,
+    referenceImages: [giloyImg],
     botanicalFeatures: {
       leafShape: "Heart-shaped, alternate",
       leafTexture: "Smooth, membranous",
@@ -436,10 +431,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Siddha", "Folk Medicine"],
     distribution: ["Throughout India", "Africa", "Southeast Asia"],
     habitat: "Tropical and subtropical regions, drought tolerant",
-    imageUrl: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=600"
-    ],
+    imageUrl: moringaImg,
+    referenceImages: [moringaImg],
     botanicalFeatures: {
       leafShape: "Bipinnate or tripinnate compound",
       leafTexture: "Delicate, feathery",
@@ -482,10 +475,8 @@ export const medicinalPlants: PlantData[] = [
     traditionalSystems: ["Ayurveda", "Siddha", "Unani", "Folk Medicine"],
     distribution: ["Throughout India", "Southeast Asia", "China"],
     habitat: "Tropical regions, partial shade, rich moist soil",
-    imageUrl: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=600",
-    referenceImages: [
-      "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=600"
-    ],
+    imageUrl: gingerImg,
+    referenceImages: [gingerImg],
     botanicalFeatures: {
       leafShape: "Long, narrow, lance-shaped",
       leafTexture: "Smooth, aromatic",
