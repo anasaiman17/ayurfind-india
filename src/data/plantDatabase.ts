@@ -8,6 +8,7 @@ import amlaImg from '@/assets/plants/amla.jpg';
 import giloyImg from '@/assets/plants/giloy.jpg';
 import moringaImg from '@/assets/plants/moringa.jpg';
 import gingerImg from '@/assets/plants/ginger.jpg';
+import garlicImg from '@/assets/plants/garlic.jpg';
 
 export interface PlantData {
   id: string;
@@ -486,6 +487,50 @@ export const medicinalPlants: PlantData[] = [
     },
     precautions: ["May interact with blood thinners", "High doses may cause heartburn"],
     dosage: "Fresh: 2-4g daily; Dried powder: 1-2g daily",
+    source: "Botanical Survey of India - Medicinal Plant Database"
+  },
+  {
+    id: "garlic-011",
+    scientificName: "Allium sativum",
+    commonNames: {
+      english: "Garlic",
+      hindi: "लहसुन (Lahsun)",
+      tamil: "பூண்டு (Poondu)",
+      telugu: "వెల్లుల్లి (Vellulli)",
+      malayalam: "വെളുത്തുള്ളി (Veluthulli)",
+      kannada: "ಬೆಳ್ಳುಳ್ಳಿ (Bellulli)",
+      bengali: "রসুন (Rosun)",
+      marathi: "लसूण (Lasun)",
+      sanskrit: "लशुन (Lashuna)"
+    },
+    family: "Amaryllidaceae",
+    description: "Garlic is a species in the onion genus, Allium. It has been used throughout recorded history for both culinary and medicinal purposes, known for its strong aroma and flavor.",
+    medicinalUses: [
+      "Cardiovascular health (cholesterol, blood pressure)",
+      "Antimicrobial and antifungal",
+      "Immune system booster",
+      "Cold and flu prevention",
+      "Blood sugar regulation",
+      "Antioxidant properties",
+      "Digestive health",
+      "Cancer prevention research"
+    ],
+    partsUsed: ["Bulb", "Cloves"],
+    activeCompounds: ["Allicin", "Alliin", "Ajoene", "S-allyl cysteine", "Diallyl disulfide"],
+    traditionalSystems: ["Ayurveda", "Siddha", "Unani", "Folk Medicine"],
+    distribution: ["Throughout India", "Central Asia", "Mediterranean"],
+    habitat: "Temperate regions, well-drained soil, cool climate for bulb formation",
+    imageUrl: garlicImg,
+    referenceImages: [garlicImg],
+    botanicalFeatures: {
+      leafShape: "Flat, linear, solid leaves",
+      leafTexture: "Smooth, waxy",
+      flowerColor: "White to pinkish",
+      stemType: "Bulbous, with papery skin covering cloves",
+      height: "30-60 cm"
+    },
+    precautions: ["May interact with blood thinners", "Can cause digestive upset", "Avoid before surgery"],
+    dosage: "Fresh cloves: 1-2 daily; Powder: 600-1200mg daily",
     source: "Botanical Survey of India - Medicinal Plant Database"
   }
 ];
