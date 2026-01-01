@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Leaf, Camera, Search, Sparkles, BookOpen, Shield, Globe, ArrowRight } from 'lucide-react';
+import { Leaf, Camera, Search, Sparkles, BookOpen, Shield, Globe, ArrowRight, Plus } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SearchBar from '@/components/SearchBar';
@@ -8,21 +8,49 @@ import LanguageSelector from '@/components/LanguageSelector';
 import PlantCard from '@/components/PlantCard';
 import PlantDetailView from '@/components/PlantDetailView';
 import ImageIdentifier from '@/components/ImageIdentifier';
+import AddPlantForm from '@/components/AddPlantForm';
 import { medicinalPlants, searchPlants, PlantData } from '@/data/plantDatabase';
 import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
-  const [searchResults, setSearchResults] = useState<PlantData[]>(medicinalPlants);
+  const [allPlants, setAllPlants] = useState<PlantData[]>([]);
+  const [searchResults, setSearchResults] = useState<PlantData[]>([]);
   const [selectedPlant, setSelectedPlant] = useState<PlantData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  // Load custom plants from localStorage on mount
+  useEffect(() => {
+    const customPlants = JSON.parse(localStorage.getItem('customPlants') || '[]');
+    const combined = [...medicinalPlants, ...customPlants];
+    setAllPlants(combined);
+    setSearchResults(combined);
+  }, []);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    const results = searchPlants(query);
-    setSearchResults(results);
+    if (!query.trim()) {
+      setSearchResults(allPlants);
+    } else {
+      const results = searchPlants(query);
+      // Also search in custom plants
+      const customPlants = JSON.parse(localStorage.getItem('customPlants') || '[]') as PlantData[];
+      const customResults = customPlants.filter(plant => 
+        plant.commonNames.english.toLowerCase().includes(query.toLowerCase()) ||
+        plant.scientificName.toLowerCase().includes(query.toLowerCase()) ||
+        plant.description.toLowerCase().includes(query.toLowerCase())
+      );
+      const combined = [...results, ...customResults.filter(cr => !results.find(r => r.id === cr.id))];
+      setSearchResults(combined);
+    }
     if (currentPage === 'home') setCurrentPage('search');
+  };
+
+  const handlePlantAdded = (plant: PlantData) => {
+    setAllPlants(prev => [...prev, plant]);
+    setSearchResults(prev => [...prev, plant]);
   };
 
   const features = [
@@ -70,6 +98,9 @@ const Index = () => {
                   <Button variant="outline" onClick={() => setCurrentPage('search')} className="h-12 px-8 gap-2">
                     <Search className="w-5 h-5" /> Browse Database
                   </Button>
+                  <Button variant="outline" onClick={() => setShowAddForm(true)} className="h-12 px-8 gap-2 border-primary/50 hover:bg-primary/10">
+                    <Plus className="w-5 h-5" /> Add New Plant
+                  </Button>
                 </motion.div>
               </section>
 
@@ -95,7 +126,7 @@ const Index = () => {
                   </Button>
                 </div>
                 <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {medicinalPlants.slice(0, 4).map((plant, i) => (
+                  {allPlants.slice(0, 4).map((plant, i) => (
                     <PlantCard key={plant.id} plant={plant} index={i} onClick={() => setSelectedPlant(plant)} />
                   ))}
                 </div>
@@ -121,9 +152,14 @@ const Index = () => {
                 <h1 className="font-display text-3xl font-bold">Medicinal Plant Database</h1>
                 <SearchBar onSearch={handleSearch} onPlantSelect={setSelectedPlant} />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-4">
                 <p className="text-muted-foreground">{searchResults.length} plants found</p>
-                <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} variant="compact" />
+                <div className="flex items-center gap-4">
+                  <Button variant="outline" onClick={() => setShowAddForm(true)} className="gap-2 border-primary/50 hover:bg-primary/10">
+                    <Plus className="w-4 h-4" /> Add New Plant
+                  </Button>
+                  <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} variant="compact" />
+                </div>
               </div>
               <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {searchResults.map((plant, i) => (
@@ -164,6 +200,13 @@ const Index = () => {
       <AnimatePresence>
         {selectedPlant && (
           <PlantDetailView plant={selectedPlant} onClose={() => setSelectedPlant(null)} selectedLanguage={selectedLanguage} />
+        )}
+      </AnimatePresence>
+
+      {/* Add Plant Form Modal */}
+      <AnimatePresence>
+        {showAddForm && (
+          <AddPlantForm onPlantAdded={handlePlantAdded} onClose={() => setShowAddForm(false)} />
         )}
       </AnimatePresence>
     </div>
