@@ -127,7 +127,7 @@ const Index = () => {
       });
       return;
     }
-    setShowAddForm(true);
+    navigate('/add-plant');
   };
 
   const features = [
