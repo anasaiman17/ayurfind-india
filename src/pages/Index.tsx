@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
@@ -27,24 +26,26 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
-  
-  const { user, isAdmin, isLoading } = useAuth();
+  const {
+    user,
+    isAdmin,
+    isLoading
+  } = useAuth();
   const navigate = useNavigate();
 
   // Load plants from database
   useEffect(() => {
     fetchDbPlants();
   }, []);
-
   const fetchDbPlants = async () => {
     try {
-      const { data, error } = await supabase
-        .from('plants')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from('plants').select('*').order('created_at', {
+        ascending: false
+      });
       if (error) throw error;
-
       const convertedPlants: PlantData[] = (data || []).map(plant => ({
         id: plant.id,
         scientificName: plant.scientific_name || 'Unknown',
@@ -52,7 +53,7 @@ const Index = () => {
           english: plant.english_name,
           hindi: plant.hindi_name || undefined,
           tamil: plant.tamil_name || undefined,
-          telugu: plant.telugu_name || undefined,
+          telugu: plant.telugu_name || undefined
         },
         family: plant.family || 'Unknown',
         description: plant.description,
@@ -75,7 +76,6 @@ const Index = () => {
         dosage: plant.dosage || 'Consult a healthcare provider',
         source: 'User Contributed'
       }));
-
       setDbPlants(convertedPlants);
       const combined = [...medicinalPlants, ...convertedPlants];
       setAllPlants(combined);
@@ -84,7 +84,6 @@ const Index = () => {
       console.error('Error fetching plants:', error);
     }
   };
-
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
@@ -92,29 +91,23 @@ const Index = () => {
     } else {
       const results = searchPlants(query);
       // Also search in db plants
-      const dbResults = dbPlants.filter(plant => 
-        plant.commonNames.english.toLowerCase().includes(query.toLowerCase()) ||
-        plant.scientificName.toLowerCase().includes(query.toLowerCase()) ||
-        plant.description.toLowerCase().includes(query.toLowerCase())
-      );
+      const dbResults = dbPlants.filter(plant => plant.commonNames.english.toLowerCase().includes(query.toLowerCase()) || plant.scientificName.toLowerCase().includes(query.toLowerCase()) || plant.description.toLowerCase().includes(query.toLowerCase()));
       const combined = [...results, ...dbResults.filter(cr => !results.find(r => r.id === cr.id))];
       setSearchResults(combined);
     }
     if (currentPage === 'home') setCurrentPage('search');
   };
-
   const handlePlantAdded = (plant: PlantData) => {
     setDbPlants(prev => [plant, ...prev]);
     setAllPlants(prev => [plant, ...prev]);
     setSearchResults(prev => [plant, ...prev]);
   };
-
   const handleAddPlantClick = () => {
     if (!user) {
       toast({
         title: 'Login Required',
         description: 'Please login as an admin to add plants.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
       navigate('/auth');
       return;
@@ -123,36 +116,51 @@ const Index = () => {
       toast({
         title: 'Admin Access Required',
         description: 'Only admins can add new plants.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
       return;
     }
     navigate('/add-plant');
   };
-
-  const features = [
-    { icon: Camera, title: 'AI Plant Identification', desc: 'Multi-stage CNN analysis with 95%+ accuracy' },
-    { icon: Shield, title: 'BSI Verified Data', desc: 'Scientifically validated medicinal information' },
-    { icon: Globe, title: 'Multilingual Support', desc: 'Search in Hindi, Tamil, Telugu & more' },
-    { icon: BookOpen, title: 'Traditional Medicine', desc: 'Ayurveda, Siddha & Folk medicine references' },
-  ];
-
-  return (
-    <div className="min-h-screen flex flex-col hero-gradient leaf-pattern">
-      <Header 
-        onNavigate={setCurrentPage} 
-        currentPage={currentPage} 
-        onOpenAdmin={() => setShowAdminPanel(true)}
-      />
+  const features = [{
+    icon: Camera,
+    title: 'AI Plant Identification',
+    desc: 'Multi-stage CNN analysis with 95%+ accuracy'
+  }, {
+    icon: Shield,
+    title: 'BSI Verified Data',
+    desc: 'Scientifically validated medicinal information'
+  }, {
+    icon: Globe,
+    title: 'Multilingual Support',
+    desc: 'Search in Hindi, Tamil, Telugu & more'
+  }, {
+    icon: BookOpen,
+    title: 'Traditional Medicine',
+    desc: 'Ayurveda, Siddha & Folk medicine references'
+  }];
+  return <div className="min-h-screen flex flex-col hero-gradient leaf-pattern">
+      <Header onNavigate={setCurrentPage} currentPage={currentPage} onOpenAdmin={() => setShowAdminPanel(true)} />
       
       <main className="flex-1 pt-24 pb-8">
         <div className="container mx-auto px-4">
           {/* Home Page */}
-          {currentPage === 'home' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-16">
+          {currentPage === 'home' && <motion.div initial={{
+          opacity: 0
+        }} animate={{
+          opacity: 1
+        }} className="space-y-16">
               {/* Hero Section */}
               <section className="text-center py-12 space-y-8">
-                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
+                <motion.div initial={{
+              y: 20,
+              opacity: 0
+            }} animate={{
+              y: 0,
+              opacity: 1
+            }} transition={{
+              delay: 0.2
+            }}>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 mb-6">
                     <Sparkles className="w-4 h-4 text-gold" />
                     <span className="text-sm font-medium text-accent-foreground">BSI Verified Database</span>
@@ -161,48 +169,64 @@ const Index = () => {
                     Discover India's <br />
                     <span className="text-gradient-nature">Medicinal Plants</span>
                   </h1>
-                  <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                    AI-powered identification system with scientifically verified data from the Botanical Survey of India
-                  </p>
+                  <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">AI-powered identification system with scientifically verified data from the Botanical Survey of India</p>
                 </motion.div>
 
-                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="flex items-center justify-center gap-4 flex-wrap">
+                <motion.div initial={{
+              y: 20,
+              opacity: 0
+            }} animate={{
+              y: 0,
+              opacity: 1
+            }} transition={{
+              delay: 0.4
+            }} className="flex items-center justify-center gap-4 flex-wrap">
                   <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} />
                 </motion.div>
 
                 <SearchBar onSearch={handleSearch} onPlantSelect={setSelectedPlant} />
 
-                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.6 }} className="flex flex-wrap justify-center gap-4">
+                <motion.div initial={{
+              y: 20,
+              opacity: 0
+            }} animate={{
+              y: 0,
+              opacity: 1
+            }} transition={{
+              delay: 0.6
+            }} className="flex flex-wrap justify-center gap-4">
                   <Button onClick={() => setCurrentPage('identify')} className="nature-gradient h-12 px-8 gap-2 shadow-soft">
                     <Camera className="w-5 h-5" /> Identify Plant
                   </Button>
                   <Button variant="outline" onClick={() => setCurrentPage('search')} className="h-12 px-8 gap-2">
                     <Search className="w-5 h-5" /> Browse Database
                   </Button>
-                  {isAdmin && (
-                    <Button variant="outline" onClick={handleAddPlantClick} className="h-12 px-8 gap-2 border-primary/50 hover:bg-primary/10">
+                  {isAdmin && <Button variant="outline" onClick={handleAddPlantClick} className="h-12 px-8 gap-2 border-primary/50 hover:bg-primary/10">
                       <Plus className="w-5 h-5" /> Add New Plant
-                    </Button>
-                  )}
-                  {!user && (
-                    <Button variant="outline" onClick={() => navigate('/auth')} className="h-12 px-8 gap-2">
+                    </Button>}
+                  {!user && <Button variant="outline" onClick={() => navigate('/auth')} className="h-12 px-8 gap-2">
                       <LogIn className="w-5 h-5" /> Login
-                    </Button>
-                  )}
+                    </Button>}
                 </motion.div>
               </section>
 
               {/* Features */}
               <section className="grid md:grid-cols-4 gap-4">
-                {features.map((f, i) => (
-                  <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.1 }} className="glass-card p-6 text-center">
+                {features.map((f, i) => <motion.div key={f.title} initial={{
+              opacity: 0,
+              y: 20
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              delay: 0.2 + i * 0.1
+            }} className="glass-card p-6 text-center">
                     <div className="w-12 h-12 mx-auto rounded-xl nature-gradient flex items-center justify-center mb-4">
                       <f.icon className="w-6 h-6 text-primary-foreground" />
                     </div>
                     <h3 className="font-display font-semibold mb-2">{f.title}</h3>
                     <p className="text-sm text-muted-foreground">{f.desc}</p>
-                  </motion.div>
-                ))}
+                  </motion.div>)}
               </section>
 
               {/* Featured Plants */}
@@ -214,28 +238,30 @@ const Index = () => {
                   </Button>
                 </div>
                 <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {allPlants.slice(0, 4).map((plant, i) => (
-                    <PlantCard key={plant.id} plant={plant} index={i} onClick={() => setSelectedPlant(plant)} />
-                  ))}
+                  {allPlants.slice(0, 4).map((plant, i) => <PlantCard key={plant.id} plant={plant} index={i} onClick={() => setSelectedPlant(plant)} />)}
                 </div>
               </section>
-            </motion.div>
-          )}
+            </motion.div>}
 
           {/* Identify Page */}
-          {currentPage === 'identify' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl mx-auto space-y-8">
+          {currentPage === 'identify' && <motion.div initial={{
+          opacity: 0
+        }} animate={{
+          opacity: 1
+        }} className="max-w-2xl mx-auto space-y-8">
               <div className="text-center">
                 <h1 className="font-display text-3xl font-bold mb-2">Plant Identification</h1>
                 <p className="text-muted-foreground">Upload or capture a plant image for AI-powered identification</p>
               </div>
               <ImageIdentifier onPlantIdentified={setSelectedPlant} />
-            </motion.div>
-          )}
+            </motion.div>}
 
           {/* Search/Database Page */}
-          {currentPage === 'search' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+          {currentPage === 'search' && <motion.div initial={{
+          opacity: 0
+        }} animate={{
+          opacity: 1
+        }} className="space-y-8">
               <div className="text-center space-y-4">
                 <h1 className="font-display text-3xl font-bold">Medicinal Plant Database</h1>
                 <SearchBar onSearch={handleSearch} onPlantSelect={setSelectedPlant} />
@@ -243,25 +269,23 @@ const Index = () => {
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <p className="text-muted-foreground">{searchResults.length} plants found</p>
                 <div className="flex items-center gap-4">
-                  {isAdmin && (
-                    <Button variant="outline" onClick={handleAddPlantClick} className="gap-2 border-primary/50 hover:bg-primary/10">
+                  {isAdmin && <Button variant="outline" onClick={handleAddPlantClick} className="gap-2 border-primary/50 hover:bg-primary/10">
                       <Plus className="w-4 h-4" /> Add New Plant
-                    </Button>
-                  )}
+                    </Button>}
                   <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} variant="compact" />
                 </div>
               </div>
               <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {searchResults.map((plant, i) => (
-                  <PlantCard key={plant.id} plant={plant} index={i} onClick={() => setSelectedPlant(plant)} />
-                ))}
+                {searchResults.map((plant, i) => <PlantCard key={plant.id} plant={plant} index={i} onClick={() => setSelectedPlant(plant)} />)}
               </div>
-            </motion.div>
-          )}
+            </motion.div>}
 
           {/* About Page */}
-          {currentPage === 'about' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl mx-auto space-y-8">
+          {currentPage === 'about' && <motion.div initial={{
+          opacity: 0
+        }} animate={{
+          opacity: 1
+        }} className="max-w-3xl mx-auto space-y-8">
               <div className="text-center">
                 <h1 className="font-display text-3xl font-bold mb-4">About VanaspatiVeda</h1>
                 <p className="text-muted-foreground">AI-based Medicinal Plant Identification System for India</p>
@@ -279,8 +303,7 @@ const Index = () => {
                   </p>
                 </div>
               </div>
-            </motion.div>
-          )}
+            </motion.div>}
         </div>
       </main>
 
@@ -288,26 +311,18 @@ const Index = () => {
 
       {/* Plant Detail Modal */}
       <AnimatePresence>
-        {selectedPlant && (
-          <PlantDetailView plant={selectedPlant} onClose={() => setSelectedPlant(null)} selectedLanguage={selectedLanguage} />
-        )}
+        {selectedPlant && <PlantDetailView plant={selectedPlant} onClose={() => setSelectedPlant(null)} selectedLanguage={selectedLanguage} />}
       </AnimatePresence>
 
       {/* Add Plant Form Modal (Admin Only) */}
       <AnimatePresence>
-        {showAddForm && isAdmin && (
-          <AddPlantForm onPlantAdded={handlePlantAdded} onClose={() => setShowAddForm(false)} />
-        )}
+        {showAddForm && isAdmin && <AddPlantForm onPlantAdded={handlePlantAdded} onClose={() => setShowAddForm(false)} />}
       </AnimatePresence>
 
       {/* Admin Panel Modal */}
       <AnimatePresence>
-        {showAdminPanel && isAdmin && (
-          <AdminPanel onClose={() => setShowAdminPanel(false)} />
-        )}
+        {showAdminPanel && isAdmin && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
       </AnimatePresence>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
