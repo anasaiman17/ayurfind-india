@@ -1,16 +1,22 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Leaf, Menu, X, BookOpen, Search, Camera, Info } from 'lucide-react';
+import { Leaf, Menu, X, BookOpen, Search, Camera, Info, LogIn, LogOut, Shield, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 
 interface HeaderProps {
   onNavigate: (page: string) => void;
   currentPage: string;
+  onOpenAdmin?: () => void;
 }
 
-const Header = ({ onNavigate, currentPage }: HeaderProps) => {
+const Header = ({ onNavigate, currentPage, onOpenAdmin }: HeaderProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, role, isAdmin, signOut, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Leaf },
@@ -21,6 +27,16 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
 
   const handleNavigate = (page: string) => {
     onNavigate(page);
+    setIsOpen(false);
+  };
+
+  const handleAuth = () => {
+    navigate('/auth');
+    setIsOpen(false);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
     setIsOpen(false);
   };
 
@@ -74,6 +90,32 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
                 </Button>
               );
             })}
+            
+            {/* Auth Buttons */}
+            {!isLoading && (
+              <>
+                {user ? (
+                  <div className="flex items-center gap-2 ml-2 pl-2 border-l border-border/50">
+                    <Badge variant={isAdmin ? 'default' : 'secondary'} className="gap-1">
+                      {isAdmin ? <Shield className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                      {isAdmin ? 'Admin' : 'User'}
+                    </Badge>
+                    {isAdmin && onOpenAdmin && (
+                      <Button variant="outline" size="sm" onClick={onOpenAdmin} className="gap-1">
+                        <Shield className="w-4 h-4" /> Panel
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-1">
+                      <LogOut className="w-4 h-4" /> Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={handleAuth} className="gap-2 ml-2">
+                    <LogIn className="w-4 h-4" /> Login
+                  </Button>
+                )}
+              </>
+            )}
           </nav>
 
           {/* Mobile Menu */}
@@ -95,6 +137,19 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
                   </div>
                 </div>
 
+                {/* User Info */}
+                {user && (
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={isAdmin ? 'default' : 'secondary'}>
+                        {isAdmin ? <Shield className="w-3 h-3 mr-1" /> : <User className="w-3 h-3 mr-1" />}
+                        {isAdmin ? 'Admin' : 'User'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2 truncate">{user.email}</p>
+                  </div>
+                )}
+
                 <nav className="flex flex-col gap-2">
                   {navItems.map((item) => {
                     const Icon = item.icon;
@@ -111,7 +166,32 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
                       </Button>
                     );
                   })}
+                  
+                  {/* Admin Panel Button */}
+                  {isAdmin && onOpenAdmin && (
+                    <Button
+                      variant="outline"
+                      onClick={() => { onOpenAdmin(); setIsOpen(false); }}
+                      className="w-full justify-start gap-3 h-12"
+                    >
+                      <Shield className="w-5 h-5" />
+                      Admin Panel
+                    </Button>
+                  )}
                 </nav>
+
+                {/* Auth */}
+                <div className="pt-4 border-t border-border/50">
+                  {user ? (
+                    <Button variant="outline" onClick={handleSignOut} className="w-full gap-2">
+                      <LogOut className="w-4 h-4" /> Sign Out
+                    </Button>
+                  ) : (
+                    <Button onClick={handleAuth} className="w-full gap-2 nature-gradient">
+                      <LogIn className="w-4 h-4" /> Login / Sign Up
+                    </Button>
+                  )}
+                </div>
 
                 <div className="mt-auto pt-8 border-t border-border/50">
                   <p className="text-xs text-muted-foreground text-center">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Leaf, Camera, Search, Sparkles, BookOpen, Shield, Globe, ArrowRight, Plus } from 'lucide-react';
+import { Leaf, Camera, Search, Sparkles, BookOpen, Shield, Globe, ArrowRight, Plus, LogIn } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SearchBar from '@/components/SearchBar';
@@ -9,25 +10,80 @@ import PlantCard from '@/components/PlantCard';
 import PlantDetailView from '@/components/PlantDetailView';
 import ImageIdentifier from '@/components/ImageIdentifier';
 import AddPlantForm from '@/components/AddPlantForm';
+import AdminPanel from '@/components/AdminPanel';
 import { medicinalPlants, searchPlants, PlantData } from '@/data/plantDatabase';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [allPlants, setAllPlants] = useState<PlantData[]>([]);
+  const [dbPlants, setDbPlants] = useState<PlantData[]>([]);
   const [searchResults, setSearchResults] = useState<PlantData[]>([]);
   const [selectedPlant, setSelectedPlant] = useState<PlantData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  
+  const { user, isAdmin, isLoading } = useAuth();
+  const navigate = useNavigate();
 
-  // Load custom plants from localStorage on mount
+  // Load plants from database
   useEffect(() => {
-    const customPlants = JSON.parse(localStorage.getItem('customPlants') || '[]');
-    const combined = [...medicinalPlants, ...customPlants];
-    setAllPlants(combined);
-    setSearchResults(combined);
+    fetchDbPlants();
   }, []);
+
+  const fetchDbPlants = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('plants')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const convertedPlants: PlantData[] = (data || []).map(plant => ({
+        id: plant.id,
+        scientificName: plant.scientific_name || 'Unknown',
+        commonNames: {
+          english: plant.english_name,
+          hindi: plant.hindi_name || undefined,
+          tamil: plant.tamil_name || undefined,
+          telugu: plant.telugu_name || undefined,
+        },
+        family: plant.family || 'Unknown',
+        description: plant.description,
+        medicinalUses: plant.medicinal_uses || [],
+        partsUsed: plant.parts_used || [],
+        activeCompounds: plant.active_compounds || [],
+        traditionalSystems: ['Folk Medicine'],
+        distribution: ['India'],
+        habitat: 'Various regions',
+        imageUrl: plant.image_url || '/placeholder.svg',
+        referenceImages: plant.image_url ? [plant.image_url] : ['/placeholder.svg'],
+        botanicalFeatures: {
+          leafShape: 'Not specified',
+          leafTexture: 'Not specified',
+          flowerColor: 'Not specified',
+          stemType: 'Not specified',
+          height: 'Not specified'
+        },
+        precautions: plant.precautions || [],
+        dosage: plant.dosage || 'Consult a healthcare provider',
+        source: 'User Contributed'
+      }));
+
+      setDbPlants(convertedPlants);
+      const combined = [...medicinalPlants, ...convertedPlants];
+      setAllPlants(combined);
+      setSearchResults(combined);
+    } catch (error) {
+      console.error('Error fetching plants:', error);
+    }
+  };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -35,22 +91,43 @@ const Index = () => {
       setSearchResults(allPlants);
     } else {
       const results = searchPlants(query);
-      // Also search in custom plants
-      const customPlants = JSON.parse(localStorage.getItem('customPlants') || '[]') as PlantData[];
-      const customResults = customPlants.filter(plant => 
+      // Also search in db plants
+      const dbResults = dbPlants.filter(plant => 
         plant.commonNames.english.toLowerCase().includes(query.toLowerCase()) ||
         plant.scientificName.toLowerCase().includes(query.toLowerCase()) ||
         plant.description.toLowerCase().includes(query.toLowerCase())
       );
-      const combined = [...results, ...customResults.filter(cr => !results.find(r => r.id === cr.id))];
+      const combined = [...results, ...dbResults.filter(cr => !results.find(r => r.id === cr.id))];
       setSearchResults(combined);
     }
     if (currentPage === 'home') setCurrentPage('search');
   };
 
   const handlePlantAdded = (plant: PlantData) => {
-    setAllPlants(prev => [...prev, plant]);
-    setSearchResults(prev => [...prev, plant]);
+    setDbPlants(prev => [plant, ...prev]);
+    setAllPlants(prev => [plant, ...prev]);
+    setSearchResults(prev => [plant, ...prev]);
+  };
+
+  const handleAddPlantClick = () => {
+    if (!user) {
+      toast({
+        title: 'Login Required',
+        description: 'Please login as an admin to add plants.',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+    if (!isAdmin) {
+      toast({
+        title: 'Admin Access Required',
+        description: 'Only admins can add new plants.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setShowAddForm(true);
   };
 
   const features = [
@@ -62,7 +139,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col hero-gradient leaf-pattern">
-      <Header onNavigate={setCurrentPage} currentPage={currentPage} />
+      <Header 
+        onNavigate={setCurrentPage} 
+        currentPage={currentPage} 
+        onOpenAdmin={() => setShowAdminPanel(true)}
+      />
       
       <main className="flex-1 pt-24 pb-8">
         <div className="container mx-auto px-4">
@@ -98,9 +179,16 @@ const Index = () => {
                   <Button variant="outline" onClick={() => setCurrentPage('search')} className="h-12 px-8 gap-2">
                     <Search className="w-5 h-5" /> Browse Database
                   </Button>
-                  <Button variant="outline" onClick={() => setShowAddForm(true)} className="h-12 px-8 gap-2 border-primary/50 hover:bg-primary/10">
-                    <Plus className="w-5 h-5" /> Add New Plant
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="outline" onClick={handleAddPlantClick} className="h-12 px-8 gap-2 border-primary/50 hover:bg-primary/10">
+                      <Plus className="w-5 h-5" /> Add New Plant
+                    </Button>
+                  )}
+                  {!user && (
+                    <Button variant="outline" onClick={() => navigate('/auth')} className="h-12 px-8 gap-2">
+                      <LogIn className="w-5 h-5" /> Login
+                    </Button>
+                  )}
                 </motion.div>
               </section>
 
@@ -155,9 +243,11 @@ const Index = () => {
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <p className="text-muted-foreground">{searchResults.length} plants found</p>
                 <div className="flex items-center gap-4">
-                  <Button variant="outline" onClick={() => setShowAddForm(true)} className="gap-2 border-primary/50 hover:bg-primary/10">
-                    <Plus className="w-4 h-4" /> Add New Plant
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="outline" onClick={handleAddPlantClick} className="gap-2 border-primary/50 hover:bg-primary/10">
+                      <Plus className="w-4 h-4" /> Add New Plant
+                    </Button>
+                  )}
                   <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} variant="compact" />
                 </div>
               </div>
@@ -203,10 +293,17 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      {/* Add Plant Form Modal */}
+      {/* Add Plant Form Modal (Admin Only) */}
       <AnimatePresence>
-        {showAddForm && (
+        {showAddForm && isAdmin && (
           <AddPlantForm onPlantAdded={handlePlantAdded} onClose={() => setShowAddForm(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Admin Panel Modal */}
+      <AnimatePresence>
+        {showAdminPanel && isAdmin && (
+          <AdminPanel onClose={() => setShowAdminPanel(false)} />
         )}
       </AnimatePresence>
     </div>

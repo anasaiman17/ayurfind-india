@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { PlantData } from '@/data/plantDatabase';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AddPlantFormProps {
   onPlantAdded: (plant: PlantData) => void;
@@ -14,6 +16,8 @@ interface AddPlantFormProps {
 }
 
 const AddPlantForm = ({ onPlantAdded, onClose }: AddPlantFormProps) => {
+  const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     englishName: '',
     hindiName: '',
@@ -30,7 +34,7 @@ const AddPlantForm = ({ onPlantAdded, onClose }: AddPlantFormProps) => {
     dosage: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.englishName.trim() || !formData.description.trim()) {
@@ -42,50 +46,82 @@ const AddPlantForm = ({ onPlantAdded, onClose }: AddPlantFormProps) => {
       return;
     }
 
-    const newPlant: PlantData = {
-      id: `custom-${Date.now()}`,
-      scientificName: formData.scientificName || 'Unknown',
-      commonNames: {
-        english: formData.englishName,
-        hindi: formData.hindiName || undefined,
-        tamil: formData.tamilName || undefined,
-        telugu: formData.teluguName || undefined,
-      },
-      family: formData.family || 'Unknown',
-      description: formData.description,
-      medicinalUses: formData.medicinalUses.split('\n').filter(use => use.trim()),
-      partsUsed: formData.partsUsed.split(',').map(p => p.trim()).filter(Boolean),
-      activeCompounds: formData.activeCompounds.split(',').map(c => c.trim()).filter(Boolean),
-      traditionalSystems: ['Folk Medicine'],
-      distribution: ['India'],
-      habitat: 'Various regions',
-      imageUrl: formData.imageUrl || '/placeholder.svg',
-      referenceImages: formData.imageUrl ? [formData.imageUrl] : ['/placeholder.svg'],
-      botanicalFeatures: {
-        leafShape: 'Not specified',
-        leafTexture: 'Not specified',
-        flowerColor: 'Not specified',
-        stemType: 'Not specified',
-        height: 'Not specified'
-      },
-      precautions: formData.precautions.split('\n').filter(p => p.trim()),
-      dosage: formData.dosage || 'Consult a healthcare provider',
-      source: 'User Contributed'
-    };
+    setIsSubmitting(true);
 
-    // Save to localStorage
-    const existingPlants = JSON.parse(localStorage.getItem('customPlants') || '[]');
-    existingPlants.push(newPlant);
-    localStorage.setItem('customPlants', JSON.stringify(existingPlants));
+    try {
+      // Save to database
+      const { data, error } = await supabase
+        .from('plants')
+        .insert({
+          english_name: formData.englishName,
+          scientific_name: formData.scientificName || null,
+          hindi_name: formData.hindiName || null,
+          tamil_name: formData.tamilName || null,
+          telugu_name: formData.teluguName || null,
+          family: formData.family || null,
+          description: formData.description,
+          medicinal_uses: formData.medicinalUses.split('\n').filter(use => use.trim()),
+          parts_used: formData.partsUsed.split(',').map(p => p.trim()).filter(Boolean),
+          active_compounds: formData.activeCompounds.split(',').map(c => c.trim()).filter(Boolean),
+          precautions: formData.precautions.split('\n').filter(p => p.trim()),
+          dosage: formData.dosage || null,
+          image_url: formData.imageUrl || null,
+          created_by: user?.id,
+        })
+        .select()
+        .single();
 
-    onPlantAdded(newPlant);
-    
-    toast({
-      title: "Plant Added Successfully!",
-      description: `${formData.englishName} has been added to the database.`,
-    });
+      if (error) throw error;
 
-    onClose();
+      const newPlant: PlantData = {
+        id: data.id,
+        scientificName: data.scientific_name || 'Unknown',
+        commonNames: {
+          english: data.english_name,
+          hindi: data.hindi_name || undefined,
+          tamil: data.tamil_name || undefined,
+          telugu: data.telugu_name || undefined,
+        },
+        family: data.family || 'Unknown',
+        description: data.description,
+        medicinalUses: data.medicinal_uses || [],
+        partsUsed: data.parts_used || [],
+        activeCompounds: data.active_compounds || [],
+        traditionalSystems: ['Folk Medicine'],
+        distribution: ['India'],
+        habitat: 'Various regions',
+        imageUrl: data.image_url || '/placeholder.svg',
+        referenceImages: data.image_url ? [data.image_url] : ['/placeholder.svg'],
+        botanicalFeatures: {
+          leafShape: 'Not specified',
+          leafTexture: 'Not specified',
+          flowerColor: 'Not specified',
+          stemType: 'Not specified',
+          height: 'Not specified'
+        },
+        precautions: data.precautions || [],
+        dosage: data.dosage || 'Consult a healthcare provider',
+        source: 'User Contributed'
+      };
+
+      onPlantAdded(newPlant);
+      
+      toast({
+        title: "Plant Added Successfully!",
+        description: `${formData.englishName} has been added to the database.`,
+      });
+
+      onClose();
+    } catch (error) {
+      console.error('Error adding plant:', error);
+      toast({
+        title: "Error Adding Plant",
+        description: "Failed to add plant to database. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -281,12 +317,15 @@ const AddPlantForm = ({ onPlantAdded, onClose }: AddPlantFormProps) => {
 
           {/* Submit Button */}
           <div className="flex gap-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 nature-gradient gap-2">
-              <Save className="w-4 h-4" />
-              Save Plant
+            <Button type="submit" className="flex-1 nature-gradient gap-2" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary-foreground"></div>
+              ) : (
+                <><Save className="w-4 h-4" /> Save Plant</>
+              )}
             </Button>
           </div>
         </form>
