@@ -27,8 +27,10 @@ export type Database = {
           id: string
           image_url: string | null
           medicinal_uses: string[] | null
+          medicine_category: string | null
           parts_used: string[] | null
           precautions: string[] | null
+          region_availability: string[] | null
           scientific_name: string | null
           tamil_name: string | null
           telugu_name: string | null
@@ -46,8 +48,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           medicinal_uses?: string[] | null
+          medicine_category?: string | null
           parts_used?: string[] | null
           precautions?: string[] | null
+          region_availability?: string[] | null
           scientific_name?: string | null
           tamil_name?: string | null
           telugu_name?: string | null
@@ -65,8 +69,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           medicinal_uses?: string[] | null
+          medicine_category?: string | null
           parts_used?: string[] | null
           precautions?: string[] | null
+          region_availability?: string[] | null
           scientific_name?: string | null
           tamil_name?: string | null
           telugu_name?: string | null

@@ -1,22 +1,51 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Image, Leaf, Pill, Save, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Image, Leaf, Pill, Save, ArrowLeft, AlertCircle, Upload, MapPin, BookOpen, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
+const INDIAN_REGIONS = [
+  'North India',
+  'South India',
+  'East India',
+  'West India',
+  'Central India',
+  'Northeast India',
+  'Himalayan Region',
+  'Western Ghats',
+  'Eastern Ghats',
+  'Coastal Regions',
+  'Desert Regions',
+  'Pan-India'
+];
+
+const MEDICINE_CATEGORIES = [
+  { value: 'Ayurveda', label: 'Ayurveda' },
+  { value: 'Siddha', label: 'Siddha' },
+  { value: 'Folk', label: 'Folk Medicine' },
+  { value: 'Unani', label: 'Unani' },
+  { value: 'Homeopathy', label: 'Homeopathy' }
+];
+
 const AddPlant = () => {
   const navigate = useNavigate();
   const { user, isAdmin, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     englishName: '',
@@ -26,12 +55,13 @@ const AddPlant = () => {
     scientificName: '',
     family: '',
     description: '',
-    imageUrl: '',
     medicinalUses: '',
     partsUsed: '',
     activeCompounds: '',
     precautions: '',
     dosage: '',
+    regionAvailability: [] as string[],
+    medicineCategory: 'Ayurveda'
   });
 
   // Redirect non-admins
@@ -49,7 +79,7 @@ const AddPlant = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">
-              <Button onClick={() => navigate('/auth')}>Go to Login</Button>
+              <Button onClick={() => navigate('/admin-login')}>Go to Admin Login</Button>
             </CardContent>
           </Card>
         </main>
@@ -57,6 +87,95 @@ const AddPlant = () => {
       </div>
     );
   }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (JPG, PNG, etc.)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImagePreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to storage
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `plants/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('plant-images')
+        .upload(filePath, file);
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('plant-images')
+        .getPublicUrl(filePath);
+
+      setUploadedImageUrl(urlData.publicUrl);
+      toast({
+        title: "Image uploaded",
+        description: "Plant image uploaded successfully"
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive"
+      });
+      setImagePreview(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setUploadedImageUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRegionChange = (region: string, checked: boolean) => {
+    if (checked) {
+      setFormData(prev => ({
+        ...prev,
+        regionAvailability: [...prev.regionAvailability, region]
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        regionAvailability: prev.regionAvailability.filter(r => r !== region)
+      }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +207,9 @@ const AddPlant = () => {
           active_compounds: formData.activeCompounds.split(',').map(c => c.trim()).filter(Boolean),
           precautions: formData.precautions.split('\n').filter(p => p.trim()),
           dosage: formData.dosage.trim() || null,
-          image_url: formData.imageUrl.trim() || null,
+          image_url: uploadedImageUrl || null,
+          region_availability: formData.regionAvailability,
+          medicine_category: formData.medicineCategory,
           created_by: user?.id,
         })
         .select()
@@ -145,37 +266,65 @@ const AddPlant = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Step 1: Plant Image */}
+              {/* Step 1: Plant Image Upload */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg nature-gradient flex items-center justify-center">
                       <Image className="w-4 h-4 text-primary-foreground" />
                     </div>
-                    Step 1: Plant Image
+                    Step 1: Upload Plant Image
                   </CardTitle>
-                  <CardDescription>Add an image URL for the plant</CardDescription>
+                  <CardDescription>Upload a clear image of the plant (max 5MB)</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="imageUrl">Image URL</Label>
-                    <Input
-                      id="imageUrl"
-                      placeholder="https://example.com/plant-image.jpg"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    />
-                  </div>
-                  {formData.imageUrl && (
-                    <div className="rounded-lg overflow-hidden border border-border max-w-sm">
-                      <img 
-                        src={formData.imageUrl} 
-                        alt="Plant preview" 
-                        className="w-full h-48 object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/placeholder.svg';
-                        }}
-                      />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="plant-image"
+                  />
+                  
+                  {!imagePreview ? (
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-accent/50 transition-colors"
+                    >
+                      <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-2">Click to upload plant image</p>
+                      <p className="text-xs text-muted-foreground">JPG, PNG, WEBP up to 5MB</p>
+                    </div>
+                  ) : (
+                    <div className="relative max-w-sm">
+                      <div className="rounded-lg overflow-hidden border border-border">
+                        <img 
+                          src={imagePreview} 
+                          alt="Plant preview" 
+                          className="w-full h-48 object-cover"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-8 w-8"
+                        onClick={removeImage}
+                        disabled={isUploading}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                      {isUploading && (
+                        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                        </div>
+                      )}
+                      {uploadedImageUrl && !isUploading && (
+                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                          ✓ Image uploaded successfully
+                        </p>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -190,12 +339,12 @@ const AddPlant = () => {
                     </div>
                     Step 2: Plant Names
                   </CardTitle>
-                  <CardDescription>Enter the plant names in different languages</CardDescription>
+                  <CardDescription>Enter the scientific name, common name, and vernacular names</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="englishName">English Name *</Label>
+                      <Label htmlFor="englishName">Common Name (English) *</Label>
                       <Input
                         id="englishName"
                         placeholder="e.g., Holy Basil"
@@ -214,33 +363,6 @@ const AddPlant = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="hindiName">Hindi Name</Label>
-                      <Input
-                        id="hindiName"
-                        placeholder="e.g., तुलसी (Tulsi)"
-                        value={formData.hindiName}
-                        onChange={(e) => setFormData({ ...formData, hindiName: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tamilName">Tamil Name</Label>
-                      <Input
-                        id="tamilName"
-                        placeholder="e.g., துளசி (Thulasi)"
-                        value={formData.tamilName}
-                        onChange={(e) => setFormData({ ...formData, tamilName: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="teluguName">Telugu Name</Label>
-                      <Input
-                        id="teluguName"
-                        placeholder="e.g., తులసి (Tulasi)"
-                        value={formData.teluguName}
-                        onChange={(e) => setFormData({ ...formData, teluguName: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
                       <Label htmlFor="family">Plant Family</Label>
                       <Input
                         id="family"
@@ -249,18 +371,96 @@ const AddPlant = () => {
                         onChange={(e) => setFormData({ ...formData, family: e.target.value })}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hindiName">Hindi Name (हिंदी)</Label>
+                      <Input
+                        id="hindiName"
+                        placeholder="e.g., तुलसी (Tulsi)"
+                        value={formData.hindiName}
+                        onChange={(e) => setFormData({ ...formData, hindiName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tamilName">Tamil Name (தமிழ்)</Label>
+                      <Input
+                        id="tamilName"
+                        placeholder="e.g., துளசி (Thulasi)"
+                        value={formData.tamilName}
+                        onChange={(e) => setFormData({ ...formData, tamilName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="teluguName">Telugu Name (తెలుగు)</Label>
+                      <Input
+                        id="teluguName"
+                        placeholder="e.g., తులసి (Tulasi)"
+                        value={formData.teluguName}
+                        onChange={(e) => setFormData({ ...formData, teluguName: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Step 3: Medicinal Uses */}
+              {/* Step 3: Region & Category */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg nature-gradient flex items-center justify-center">
+                      <MapPin className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                    Step 3: Region & Medicine Category
+                  </CardTitle>
+                  <CardDescription>Select regions where the plant is available and its medicine category</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <Label>Region-wise Availability in India</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {INDIAN_REGIONS.map((region) => (
+                        <div key={region} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={region}
+                            checked={formData.regionAvailability.includes(region)}
+                            onCheckedChange={(checked) => handleRegionChange(region, checked as boolean)}
+                          />
+                          <Label htmlFor={region} className="text-sm font-normal cursor-pointer">
+                            {region}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 max-w-sm">
+                    <Label htmlFor="medicineCategory">Traditional Medicine Category</Label>
+                    <Select
+                      value={formData.medicineCategory}
+                      onValueChange={(value) => setFormData({ ...formData, medicineCategory: value })}
+                    >
+                      <SelectTrigger id="medicineCategory">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEDICINE_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Step 4: Medicinal Information */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg nature-gradient flex items-center justify-center">
                       <Pill className="w-4 h-4 text-primary-foreground" />
                     </div>
-                    Step 3: Medicinal Information
+                    Step 4: Medicinal Information
                   </CardTitle>
                   <CardDescription>Add medicinal uses and other details</CardDescription>
                 </CardHeader>
@@ -333,7 +533,11 @@ const AddPlant = () => {
                 <Button type="button" variant="outline" onClick={() => navigate('/')} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit" className="nature-gradient gap-2 min-w-32" disabled={isSubmitting}>
+                <Button 
+                  type="submit" 
+                  className="nature-gradient gap-2 min-w-32" 
+                  disabled={isSubmitting || isUploading}
+                >
                   {isSubmitting ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary-foreground"></div>
                   ) : (
