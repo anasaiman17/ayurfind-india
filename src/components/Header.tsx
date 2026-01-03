@@ -31,7 +31,7 @@ const Header = ({ onNavigate, currentPage, onOpenAdmin }: HeaderProps) => {
   };
 
   const handleAuth = () => {
-    navigate('/auth');
+    navigate('/user-login');
     setIsOpen(false);
   };
 
