@@ -1,12 +1,12 @@
 import { Toaster } from "@/components/ui/toaster";
-import { Suspense, lazy } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
+import AdminLogin from "./pages/AdminLogin";
+import UserLogin from "./pages/UserLogin";
 import AddPlant from "./pages/AddPlant";
 import NotFound from "./pages/NotFound";
 
@@ -21,7 +21,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/user-login" element={<UserLogin />} />
             <Route path="/add-plant" element={<AddPlant />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
