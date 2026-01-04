@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Shield, Mail, Lock, Eye, EyeOff, Leaf } from "lucide-react";
+import { Shield, Mail, Lock, Eye, EyeOff, Leaf, UserPlus, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -10,15 +10,18 @@ import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+const nameSchema = z.string().min(2, "Name must be at least 2 characters");
 
 const AdminLogin = () => {
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
   
-  const { signIn, user, isLoading, isAdmin, role } = useAuth();
+  const { signIn, signUp, user, isLoading, isAdmin, role } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -28,17 +31,15 @@ const AdminLogin = () => {
         navigate("/");
       } else if (role) {
         toast({
-          title: "Access Denied",
-          description: "This login is for administrators only. Please use the User login.",
-          variant: "destructive",
+          title: "Access Pending",
+          description: "Your account has been created. Please contact an existing admin to grant you admin privileges.",
         });
-        navigate("/user-login");
       }
     }
   }, [user, isLoading, isAdmin, role, navigate, toast]);
 
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string } = {};
+    const newErrors: { email?: string; password?: string; fullName?: string } = {};
     
     try {
       emailSchema.parse(email);
@@ -55,6 +56,16 @@ const AdminLogin = () => {
         newErrors.password = e.errors[0].message;
       }
     }
+
+    if (isSignUp) {
+      try {
+        nameSchema.parse(fullName);
+      } catch (e) {
+        if (e instanceof z.ZodError) {
+          newErrors.fullName = e.errors[0].message;
+        }
+      }
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -67,16 +78,40 @@ const AdminLogin = () => {
     
     setIsSubmitting(true);
     
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      toast({
-        title: "Login Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
+    if (isSignUp) {
+      const { error } = await signUp(email, password, fullName);
+      
+      if (error) {
+        toast({
+          title: "Registration Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "Your account has been created. You now have user access. An existing admin can promote you to admin.",
+        });
+        setIsSubmitting(false);
+      }
+    } else {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+      }
     }
+  };
+
+  const toggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setErrors({});
   };
 
   if (isLoading) {
@@ -88,25 +123,72 @@ const AdminLogin = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-destructive/5 to-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-background p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <div className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-destructive/20 p-8">
+        <div className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-primary/20 p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-destructive/10 rounded-full mb-4">
-              <Shield className="w-8 h-8 text-destructive" />
+            <div className="inline-flex items-center justify-center w-16 h-16 nature-gradient rounded-full mb-4">
+              <Shield className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Admin Login</h1>
+            <h1 className="text-2xl font-bold text-foreground">
+              {isSignUp ? "Register Admin Account" : "Admin Login"}
+            </h1>
             <p className="text-muted-foreground mt-2">
-              Secure access for administrators only
+              {isSignUp 
+                ? "Create an account to manage plants" 
+                : "Sign in to access admin features"}
             </p>
           </div>
 
+          {/* Toggle Buttons */}
+          <div className="flex gap-2 mb-6">
+            <Button
+              type="button"
+              variant={!isSignUp ? "default" : "outline"}
+              className={`flex-1 gap-2 ${!isSignUp ? 'nature-gradient' : ''}`}
+              onClick={() => setIsSignUp(false)}
+            >
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </Button>
+            <Button
+              type="button"
+              variant={isSignUp ? "default" : "outline"}
+              className={`flex-1 gap-2 ${isSignUp ? 'nature-gradient' : ''}`}
+              onClick={() => setIsSignUp(true)}
+            >
+              <UserPlus className="w-4 h-4" />
+              Register
+            </Button>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-5">
+            {isSignUp && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2"
+              >
+                <label className="text-sm font-medium text-foreground">Full Name</label>
+                <Input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Enter your full name"
+                  className="h-12"
+                />
+                {errors.fullName && (
+                  <p className="text-sm text-destructive">{errors.fullName}</p>
+                )}
+              </motion.div>
+            )}
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Email</label>
               <div className="relative">
@@ -116,7 +198,7 @@ const AdminLogin = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@example.com"
-                  className="pl-10 h-12 border-destructive/20 focus:border-destructive"
+                  className="pl-10 h-12"
                 />
               </div>
               {errors.email && (
@@ -132,8 +214,8 @@ const AdminLogin = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="pl-10 pr-10 h-12 border-destructive/20 focus:border-destructive"
+                  placeholder={isSignUp ? "Create a password (min 6 characters)" : "Enter your password"}
+                  className="pl-10 pr-10 h-12"
                 />
                 <button
                   type="button"
@@ -151,34 +233,45 @@ const AdminLogin = () => {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              className="w-full h-12 nature-gradient"
             >
               {isSubmitting ? (
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
-                  Signing in...
+                  {isSignUp ? "Creating Account..." : "Signing in..."}
                 </div>
               ) : (
-                "Sign In as Admin"
+                <>
+                  {isSignUp ? (
+                    <><UserPlus className="w-4 h-4 mr-2" /> Create Account</>
+                  ) : (
+                    <><LogIn className="w-4 h-4 mr-2" /> Sign In</>
+                  )}
+                </>
               )}
             </Button>
           </form>
 
+          {isSignUp && (
+            <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                <strong>Note:</strong> New accounts are created with user role. An existing admin can promote you to admin from the Admin Panel.
+              </p>
+            </div>
+          )}
+
           <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Not an admin?{" "}
-              <button
-                onClick={() => navigate("/user-login")}
-                className="text-primary hover:underline font-medium"
-              >
-                User Login
-              </button>
-            </p>
+            <button
+              onClick={() => navigate("/")}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              ← Back to Home
+            </button>
           </div>
 
           <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <Leaf className="h-4 w-4 text-primary" />
-            <span>Indian Medicinal Plants Database</span>
+            <span>VanaspatiVeda - Indian Medicinal Plants</span>
           </div>
         </div>
       </motion.div>
