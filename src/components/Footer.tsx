@@ -1,9 +1,7 @@
 import { motion } from 'framer-motion';
 import { Leaf, Heart, Github, ExternalLink } from 'lucide-react';
-
 const Footer = () => {
-  return (
-    <footer className="mt-auto border-t border-border/50 bg-card/50 backdrop-blur-sm">
+  return <footer className="mt-auto border-t border-border/50 bg-card/50 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-3 gap-8">
           {/* Brand */}
@@ -13,7 +11,7 @@ const Footer = () => {
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
-                <h3 className="font-display text-lg font-bold">VanaspatiVeda</h3>
+                <h3 className="font-display text-lg font-bold">MedFind</h3>
                 <p className="text-xs text-muted-foreground">Indian Medicinal Plants</p>
               </div>
             </div>
@@ -28,12 +26,7 @@ const Footer = () => {
             <h4 className="font-display font-semibold">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a 
-                  href="https://bsi.gov.in/page/en/medicinal-plant-database" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 hover:text-primary transition-colors"
-                >
+                <a href="https://bsi.gov.in/page/en/medicinal-plant-database" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-primary transition-colors">
                   <ExternalLink className="w-4 h-4" />
                   BSI Medicinal Plant Database
                 </a>
@@ -63,16 +56,10 @@ const Footer = () => {
         </div>
 
         <div className="mt-8 pt-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground text-center md:text-left">
-            © 2024 VanaspatiVeda. Built for academic research and final year project submission.
-          </p>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            Made with <Heart className="w-4 h-4 text-destructive" /> for India's botanical heritage
-          </p>
+          
+          
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
