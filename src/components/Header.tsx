@@ -31,7 +31,7 @@ const Header = ({ onNavigate, currentPage, onOpenAdmin }: HeaderProps) => {
   };
 
   const handleAuth = () => {
-    navigate('/user-login');
+    navigate('/admin-login');
     setIsOpen(false);
   };
 
@@ -111,7 +111,7 @@ const Header = ({ onNavigate, currentPage, onOpenAdmin }: HeaderProps) => {
                   </div>
                 ) : (
                   <Button variant="outline" size="sm" onClick={handleAuth} className="gap-2 ml-2">
-                    <LogIn className="w-4 h-4" /> Login
+                    <Shield className="w-4 h-4" /> Admin Login
                   </Button>
                 )}
               </>
@@ -188,7 +188,7 @@ const Header = ({ onNavigate, currentPage, onOpenAdmin }: HeaderProps) => {
                     </Button>
                   ) : (
                     <Button onClick={handleAuth} className="w-full gap-2 nature-gradient">
-                      <LogIn className="w-4 h-4" /> Login / Sign Up
+                      <Shield className="w-4 h-4" /> Admin Login
                     </Button>
                   )}
                 </div>
