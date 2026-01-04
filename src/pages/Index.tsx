@@ -109,7 +109,7 @@ const Index = () => {
         description: 'Please login as an admin to add plants.',
         variant: 'destructive'
       });
-      navigate('/auth');
+      navigate('/admin-login');
       return;
     }
     if (!isAdmin) {
@@ -204,8 +204,8 @@ const Index = () => {
                   {isAdmin && <Button variant="outline" onClick={handleAddPlantClick} className="h-12 px-8 gap-2 border-primary/50 hover:bg-primary/10">
                       <Plus className="w-5 h-5" /> Add New Plant
                     </Button>}
-                  {!user && <Button variant="outline" onClick={() => navigate('/auth')} className="h-12 px-8 gap-2">
-                      <LogIn className="w-5 h-5" /> Login
+                  {!user && <Button variant="outline" onClick={() => navigate('/admin-login')} className="h-12 px-8 gap-2">
+                      <LogIn className="w-5 h-5" /> Admin Login
                     </Button>}
                 </motion.div>
               </section>
