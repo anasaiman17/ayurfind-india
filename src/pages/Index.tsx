@@ -201,12 +201,9 @@ const Index = () => {
                   <Button variant="outline" onClick={() => setCurrentPage('search')} className="h-12 px-8 gap-2">
                     <Search className="w-5 h-5" /> Browse Database
                   </Button>
-                  {isAdmin && <Button variant="outline" onClick={handleAddPlantClick} className="h-12 px-8 gap-2 border-primary/50 hover:bg-primary/10">
-                      <Plus className="w-5 h-5" /> Add New Plant
-                    </Button>}
-                  {!user && <Button variant="outline" onClick={() => navigate('/admin-login')} className="h-12 px-8 gap-2">
-                      <LogIn className="w-5 h-5" /> Admin Login
-                    </Button>}
+                  <Button variant="outline" onClick={handleAddPlantClick} className="h-12 px-8 gap-2 border-primary/50 hover:bg-primary/10">
+                    <Plus className="w-5 h-5" /> Add New Plant
+                  </Button>
                 </motion.div>
               </section>
 
@@ -269,9 +266,9 @@ const Index = () => {
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <p className="text-muted-foreground">{searchResults.length} plants found</p>
                 <div className="flex items-center gap-4">
-                  {isAdmin && <Button variant="outline" onClick={handleAddPlantClick} className="gap-2 border-primary/50 hover:bg-primary/10">
-                      <Plus className="w-4 h-4" /> Add New Plant
-                    </Button>}
+                  <Button variant="outline" onClick={handleAddPlantClick} className="gap-2 border-primary/50 hover:bg-primary/10">
+                    <Plus className="w-4 h-4" /> Add New Plant
+                  </Button>
                   <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} variant="compact" />
                 </div>
               </div>
