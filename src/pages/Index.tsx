@@ -161,12 +161,15 @@ const Index = () => {
             }} transition={{
               delay: 0.2
             }}>
-                  
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 mb-6">
+                    <Sparkles className="w-4 h-4 text-gold" />
+                    <span className="text-sm font-medium text-accent-foreground">BSI Verified Database</span>
+                  </div>
                   <h1 className="font-display text-4xl md:text-6xl font-bold text-foreground leading-tight">
                     Discover India's <br />
                     <span className="text-gradient-nature">Medicinal Plants</span>
                   </h1>
-                  <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">AI-powered identification system</p>
+                  <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">AI-powered identification system with scientifically verified data from the Botanical Survey of India</p>
                 </motion.div>
 
                 <motion.div initial={{
@@ -282,7 +285,7 @@ const Index = () => {
         }} className="max-w-3xl mx-auto space-y-8">
               <div className="text-center">
                 <h1 className="font-display text-3xl font-bold mb-4">About VanaspatiVeda</h1>
-                <p className="text-muted-foreground">AI-based Medicinal Plant Identification System for India</p>
+                <p className="text-muted-foreground">MedFind is a comprehensive medicinal plant identification system designed for academic research and real-world deployment. It features multi-stage deep learning analysis, multilingual search capabilities, and scientifically verified data sourced from the Botanical Survey of India.</p>
               </div>
               <div className="glass-card p-8 space-y-6">
                 <p className="text-muted-foreground leading-relaxed">
