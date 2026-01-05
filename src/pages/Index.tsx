@@ -250,7 +250,7 @@ const Index = () => {
                 <h1 className="font-display text-3xl font-bold mb-2">Plant Identification</h1>
                 <p className="text-muted-foreground">Upload or capture a plant image for AI-powered identification</p>
               </div>
-              <ImageIdentifier onPlantIdentified={setSelectedPlant} />
+              <ImageIdentifier onPlantIdentified={setSelectedPlant} plants={allPlants} />
             </motion.div>}
 
           {/* Search/Database Page */}
