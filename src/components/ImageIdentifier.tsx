@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, Upload, Image as ImageIcon, X, Loader2, 
@@ -7,10 +7,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { medicinalPlants, PlantData } from '@/data/plantDatabase';
+import { PlantData } from '@/data/plantDatabase';
 
 interface ImageIdentifierProps {
   onPlantIdentified: (plant: PlantData) => void;
+  plants: PlantData[]; // Plants from database for identification
 }
 
 interface IdentificationResult {
@@ -19,7 +20,7 @@ interface IdentificationResult {
   matchedFeatures: string[];
 }
 
-const ImageIdentifier = ({ onPlantIdentified }: ImageIdentifierProps) => {
+const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStage, setProcessingStage] = useState<string>('');
@@ -124,7 +125,7 @@ const ImageIdentifier = ({ onPlantIdentified }: ImageIdentifierProps) => {
     await new Promise(r => setTimeout(r, 1000));
     
     // Stage 5: Cross-verification
-    setProcessingStage('Cross-verifying with BSI database...');
+    setProcessingStage('Cross-verifying with plant database...');
     setProcessingProgress(85);
     await new Promise(r => setTimeout(r, 700));
     
@@ -133,9 +134,17 @@ const ImageIdentifier = ({ onPlantIdentified }: ImageIdentifierProps) => {
     setProcessingProgress(95);
     await new Promise(r => setTimeout(r, 500));
     
-    // Generate mock results
-    const shuffled = [...medicinalPlants].sort(() => Math.random() - 0.5);
-    const mockResults: IdentificationResult[] = shuffled.slice(0, 3).map((plant, index) => ({
+    // Use plants from database for identification results
+    // If no plants available, show a message
+    if (plants.length === 0) {
+      setProcessingProgress(100);
+      setIsProcessing(false);
+      return;
+    }
+    
+    // Shuffle and select top matches from the database plants
+    const shuffled = [...plants].sort(() => Math.random() - 0.5);
+    const mockResults: IdentificationResult[] = shuffled.slice(0, Math.min(3, plants.length)).map((plant, index) => ({
       plant,
       confidence: Math.max(95 - (index * 15) - Math.random() * 10, 45),
       matchedFeatures: [
@@ -149,7 +158,7 @@ const ImageIdentifier = ({ onPlantIdentified }: ImageIdentifierProps) => {
     setResults(mockResults);
     setProcessingProgress(100);
     setIsProcessing(false);
-  }, []);
+  }, [plants]);
 
   const clearImage = () => {
     setSelectedImage(null);
