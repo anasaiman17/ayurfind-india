@@ -1,13 +1,15 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Camera, Upload, Image as ImageIcon, X, Loader2, 
+  Camera, Upload, X, Loader2, 
   AlertCircle, CheckCircle2, RefreshCw, Sparkles,
   Focus, Sun, Droplets, Scan
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { PlantData } from '@/data/plantDatabase';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface ImageIdentifierProps {
   onPlantIdentified: (plant: PlantData) => void;
@@ -20,6 +22,20 @@ interface IdentificationResult {
   matchedFeatures: string[];
 }
 
+interface AIMatch {
+  plantId: string;
+  confidence: number;
+  matchedFeatures: string[];
+  reasoning: string;
+}
+
+interface AIResponse {
+  matches: AIMatch[];
+  plantDetected: boolean;
+  imageQuality: 'good' | 'poor';
+  qualityIssues: string[];
+}
+
 const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -28,6 +44,7 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
   const [results, setResults] = useState<IdentificationResult[] | null>(null);
   const [imageQuality, setImageQuality] = useState<'good' | 'poor' | null>(null);
   const [qualityIssues, setQualityIssues] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -42,6 +59,7 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
         setSelectedImage(event.target?.result as string);
         setResults(null);
         setImageQuality(null);
+        setError(null);
       };
       reader.readAsDataURL(file);
     }
@@ -60,7 +78,11 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
       }
     } catch (error) {
       console.error('Camera access denied:', error);
-      alert('Unable to access camera. Please check permissions.');
+      toast({
+        title: 'Camera Error',
+        description: 'Unable to access camera. Please check permissions.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -71,11 +93,12 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
       canvas.height = videoRef.current.videoHeight;
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(videoRef.current, 0, 0);
-      const imageData = canvas.toDataURL('image/jpeg');
+      const imageData = canvas.toDataURL('image/jpeg', 0.8);
       setSelectedImage(imageData);
       stopCamera();
       setResults(null);
       setImageQuality(null);
+      setError(null);
     }
   };
 
@@ -87,78 +110,120 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
     setShowCamera(false);
   };
 
-  const simulateProcessing = useCallback(async () => {
+  const identifyPlant = useCallback(async () => {
+    if (!selectedImage || plants.length === 0) return;
+    
     setIsProcessing(true);
     setResults(null);
+    setError(null);
     
-    // Stage 1: Quality Validation
-    setProcessingStage('Validating image quality...');
-    setProcessingProgress(10);
-    await new Promise(r => setTimeout(r, 800));
-    
-    // Simulate quality check (random for demo)
-    const isGoodQuality = Math.random() > 0.2;
-    setProcessingProgress(25);
-    
-    if (!isGoodQuality) {
-      const issues = ['Image appears blurry', 'Lighting may be insufficient'];
-      setQualityIssues(issues);
-      setImageQuality('poor');
-      // Continue anyway for demo
-    } else {
-      setImageQuality('good');
-    }
-    
-    // Stage 2: Preprocessing
-    setProcessingStage('Preprocessing image...');
-    setProcessingProgress(40);
-    await new Promise(r => setTimeout(r, 600));
-    
-    // Stage 3: Feature Extraction
-    setProcessingStage('Extracting leaf features...');
-    setProcessingProgress(55);
-    await new Promise(r => setTimeout(r, 800));
-    
-    // Stage 4: CNN Analysis
-    setProcessingStage('Analyzing with deep learning model...');
-    setProcessingProgress(70);
-    await new Promise(r => setTimeout(r, 1000));
-    
-    // Stage 5: Cross-verification
-    setProcessingStage('Cross-verifying with plant database...');
-    setProcessingProgress(85);
-    await new Promise(r => setTimeout(r, 700));
-    
-    // Stage 6: Generate Results
-    setProcessingStage('Generating verified results...');
-    setProcessingProgress(95);
-    await new Promise(r => setTimeout(r, 500));
-    
-    // Use plants from database for identification results
-    // If no plants available, show a message
-    if (plants.length === 0) {
+    try {
+      // Stage 1: Preparing image
+      setProcessingStage('Preparing image for analysis...');
+      setProcessingProgress(15);
+      await new Promise(r => setTimeout(r, 300));
+      
+      // Stage 2: Sending to AI
+      setProcessingStage('Sending to AI vision model...');
+      setProcessingProgress(30);
+      
+      // Prepare plant data for the AI
+      const plantInfo = plants.map(p => ({
+        id: p.id,
+        englishName: p.commonNames.english,
+        scientificName: p.scientificName,
+        family: p.family,
+        description: p.description
+      }));
+      
+      // Call the edge function
+      const { data, error: fnError } = await supabase.functions.invoke('identify-plant', {
+        body: {
+          imageBase64: selectedImage,
+          plants: plantInfo
+        }
+      });
+      
+      if (fnError) {
+        throw new Error(fnError.message || 'Failed to identify plant');
+      }
+      
+      // Stage 3: Processing AI response
+      setProcessingStage('Processing AI analysis...');
+      setProcessingProgress(70);
+      await new Promise(r => setTimeout(r, 200));
+      
+      const aiResponse = data as AIResponse;
+      
+      // Set image quality from AI
+      setImageQuality(aiResponse.imageQuality || 'good');
+      if (aiResponse.qualityIssues?.length > 0) {
+        setQualityIssues(aiResponse.qualityIssues);
+      }
+      
+      // Check if plant was detected
+      if (!aiResponse.plantDetected) {
+        setError('No plant detected in the image. Please upload a clear image of a plant.');
+        setProcessingProgress(100);
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Stage 4: Matching with database
+      setProcessingStage('Matching with plant database...');
+      setProcessingProgress(85);
+      await new Promise(r => setTimeout(r, 200));
+      
+      // Map AI matches to plant data
+      const identificationResults: IdentificationResult[] = [];
+      
+      for (const match of aiResponse.matches || []) {
+        const plant = plants.find(p => p.id === match.plantId);
+        if (plant) {
+          identificationResults.push({
+            plant,
+            confidence: match.confidence,
+            matchedFeatures: match.matchedFeatures || []
+          });
+        }
+      }
+      
+      // Sort by confidence
+      identificationResults.sort((a, b) => b.confidence - a.confidence);
+      
+      // Stage 5: Finalizing
+      setProcessingStage('Generating results...');
+      setProcessingProgress(95);
+      await new Promise(r => setTimeout(r, 200));
+      
+      if (identificationResults.length === 0) {
+        setError('Could not match the plant to any in our database. Try a different image or angle.');
+      } else {
+        setResults(identificationResults.slice(0, 3));
+      }
+      
       setProcessingProgress(100);
+    } catch (err) {
+      console.error('Identification error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to identify plant';
+      
+      if (errorMessage.includes('Rate limit')) {
+        setError('Too many requests. Please wait a moment and try again.');
+      } else if (errorMessage.includes('credits')) {
+        setError('AI service temporarily unavailable. Please try again later.');
+      } else {
+        setError(errorMessage);
+      }
+      
+      toast({
+        title: 'Identification Error',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+    } finally {
       setIsProcessing(false);
-      return;
     }
-    
-    // Shuffle and select top matches from the database plants
-    const shuffled = [...plants].sort(() => Math.random() - 0.5);
-    const mockResults: IdentificationResult[] = shuffled.slice(0, Math.min(3, plants.length)).map((plant, index) => ({
-      plant,
-      confidence: Math.max(95 - (index * 15) - Math.random() * 10, 45),
-      matchedFeatures: [
-        'Leaf shape pattern',
-        'Vein structure',
-        'Color profile',
-        'Texture analysis'
-      ].slice(0, 4 - index)
-    }));
-    
-    setResults(mockResults);
-    setProcessingProgress(100);
-    setIsProcessing(false);
-  }, [plants]);
+  }, [selectedImage, plants]);
 
   const clearImage = () => {
     setSelectedImage(null);
@@ -166,6 +231,7 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
     setImageQuality(null);
     setQualityIssues([]);
     setProcessingProgress(0);
+    setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -349,14 +415,39 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
             )}
 
             {/* Identify Button */}
-            {!isProcessing && !results && (
+            {!isProcessing && !results && !error && (
               <Button
-                onClick={simulateProcessing}
+                onClick={identifyPlant}
                 className="w-full nature-gradient h-12 text-lg shadow-soft hover:shadow-medium transition-shadow"
               >
                 <Sparkles className="w-5 h-5 mr-2" />
                 Identify Plant
               </Button>
+            )}
+
+            {/* Error Message */}
+            {error && !isProcessing && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-4 rounded-xl bg-destructive/10 border border-destructive/20"
+              >
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-destructive">{error}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearImage}
+                      className="mt-3 gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Try Again
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
             )}
 
             {/* Processing Indicator */}
