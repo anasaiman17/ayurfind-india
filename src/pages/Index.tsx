@@ -285,17 +285,8 @@ const Index = () => {
                 <p className="text-muted-foreground">MedFind is a comprehensive medicinal plant identification system designed for academic research and real-world deployment. It features multi-stage deep learning analysis, multilingual search capabilities, and scientifically verified data sourced from the Botanical Survey of India.</p>
               </div>
               <div className="glass-card p-8 space-y-6">
-                <p className="text-muted-foreground leading-relaxed">
-                  VanaspatiVeda is a comprehensive medicinal plant identification system designed for academic research 
-                  and real-world deployment. It features multi-stage deep learning analysis, multilingual search capabilities, 
-                  and scientifically verified data sourced from the Botanical Survey of India.
-                </p>
-                <div className="p-4 rounded-xl bg-gold/10 border border-gold/20">
-                  <p className="text-sm text-accent-foreground">
-                    <strong>Data Attribution:</strong> All plant data is sourced from the Botanical Survey of India 
-                    Medicinal Plant Database for academic and research purposes.
-                  </p>
-                </div>
+                <p className="text-muted-foreground leading-relaxed">MedFind is a comprehensive medicinal plant identification system designed for academic research and real-world deployment. It features multi-stage deep learning analysis, multilingual search capabilities, and scientifically verified data sourced from the Botanical Survey of India.</p>
+                
               </div>
             </motion.div>}
         </div>
