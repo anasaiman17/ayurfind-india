@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import ThemeToggle from '@/components/ThemeToggle';
 interface HeaderProps {
   onNavigate: (page: string) => void;
   currentPage: string;
@@ -96,6 +97,9 @@ const Header = ({
                 </Button>;
           })}
             
+            {/* Theme Toggle */}
+            <ThemeToggle />
+            
             {/* Auth Buttons */}
             {!isLoading && <>
                 {user ? <div className="flex items-center gap-2 ml-2 pl-2 border-l border-border/50">
@@ -165,8 +169,12 @@ const Header = ({
                     </Button>}
                 </nav>
 
-                {/* Auth */}
-                <div className="pt-4 border-t border-border/50">
+                {/* Theme & Auth */}
+                <div className="pt-4 border-t border-border/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Theme</span>
+                    <ThemeToggle />
+                  </div>
                   {user ? <Button variant="outline" onClick={handleSignOut} className="w-full gap-2">
                       <LogOut className="w-4 h-4" /> Sign Out
                     </Button> : <Button onClick={handleAuth} className="w-full gap-2 nature-gradient">
