@@ -161,10 +161,7 @@ const Index = () => {
             }} transition={{
               delay: 0.2
             }}>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 mb-6">
-                    <Sparkles className="w-4 h-4 text-gold" />
-                    <span className="text-sm font-medium text-accent-foreground">BSI Verified Database</span>
-                  </div>
+                  
                   <h1 className="font-display text-4xl md:text-6xl font-bold text-foreground leading-tight">
                     Discover India's <br />
                     <span className="text-gradient-nature">Medicinal Plants</span>
