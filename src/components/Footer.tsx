@@ -56,11 +56,10 @@ const Footer = () => {
         </div>
 
         <div className="mt-8 pt-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} MedFind. All rights reserved.
-          </p>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            Developed with <Heart className="w-4 h-4 text-red-500 fill-red-500" /> by 
+          
+          <p className="text-sm text-muted-foreground flex items-center gap-1">                                                                                                                                                                                                                                                           Developed with
+by
+MOHAMMED ANAS AIMAN M<Heart className="w-4 h-4 text-red-500 fill-red-500" /> by 
             <span className="font-semibold text-foreground">MOHAMMED ANAS AIMAN M</span>
           </p>
         </div>
