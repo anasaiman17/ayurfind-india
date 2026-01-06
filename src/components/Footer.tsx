@@ -1,7 +1,8 @@
-import { motion } from 'framer-motion';
-import { Leaf, Heart, Github, ExternalLink } from 'lucide-react';
+import { Leaf, Heart, ExternalLink } from 'lucide-react';
+
 const Footer = () => {
-  return <footer className="mt-auto border-t border-border/50 bg-card/50 backdrop-blur-sm">
+  return (
+    <footer className="mt-auto border-t border-border/50 bg-card/50 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-3 gap-8">
           {/* Brand */}
@@ -55,15 +56,15 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
-          
-          <p className="text-sm text-muted-foreground flex items-center gap-1">                                                                                                                                                                                                                                                           Developed with
-by
-MOHAMMED ANAS AIMAN M<Heart className="w-4 h-4 text-red-500 fill-red-500" /> by 
+        <div className="mt-8 pt-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-center gap-4">
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            Developed with <Heart className="w-4 h-4 text-red-500 fill-red-500" /> by
             <span className="font-semibold text-foreground">MOHAMMED ANAS AIMAN M</span>
           </p>
         </div>
       </div>
-    </footer>;
+    </footer>
+  );
 };
+
 export default Footer;
