@@ -206,21 +206,7 @@ const Index = () => {
 
               {/* Features */}
               <section className="grid md:grid-cols-4 gap-4">
-                {features.map((f, i) => <motion.div key={f.title} initial={{
-              opacity: 0,
-              y: 20
-            }} animate={{
-              opacity: 1,
-              y: 0
-            }} transition={{
-              delay: 0.2 + i * 0.1
-            }} className="glass-card p-6 text-center">
-                    <div className="w-12 h-12 mx-auto rounded-xl nature-gradient flex items-center justify-center mb-4">
-                      <f.icon className="w-6 h-6 text-primary-foreground" />
-                    </div>
-                    <h3 className="font-display font-semibold mb-2">{f.title}</h3>
-                    <p className="text-sm text-muted-foreground">{f.desc}</p>
-                  </motion.div>)}
+                {features.map((f, i) => {})}
               </section>
 
               {/* Featured Plants */}

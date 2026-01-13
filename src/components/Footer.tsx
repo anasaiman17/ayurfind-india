@@ -1,8 +1,6 @@
 import { Leaf, Heart, ExternalLink } from 'lucide-react';
-
 const Footer = () => {
-  return (
-    <footer className="mt-auto border-t border-border/50 bg-card/50 backdrop-blur-sm">
+  return <footer className="mt-auto border-t border-border/50 bg-card/50 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-3 gap-8">
           {/* Brand */}
@@ -27,10 +25,7 @@ const Footer = () => {
             <h4 className="font-display font-semibold">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a href="https://bsi.gov.in/page/en/medicinal-plant-database" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-primary transition-colors">
-                  <ExternalLink className="w-4 h-4" />
-                  BSI Medicinal Plant Database
-                </a>
+                
               </li>
               <li className="flex items-center gap-2">
                 <Leaf className="w-4 h-4" />
@@ -63,8 +58,6 @@ const Footer = () => {
           </p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
