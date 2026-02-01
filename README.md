@@ -61,21 +61,6 @@ Built by Anas Aiman
 
 ## Project Structure
 
-```
-src/
-├── components/          # React components
-│   ├── ui/             # shadcn/ui components
-│   ├── Header.tsx      # Navigation header
-│   ├── PlantCard.tsx   # Plant display card
-│   ├── ImageIdentifier.tsx  # AI identification component
-│   └── ...
-├── pages/              # Page components
-├── contexts/           # React contexts (Auth)
-├── hooks/              # Custom React hooks
-├── integrations/       # Supabase client & types
-├── data/               # Static data & types
-└── assets/             # Images and static assets
-
 supabase/
 ├── functions/          # Edge functions
 │   └── identify-plant/ # AI plant identification
