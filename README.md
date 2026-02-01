@@ -1,81 +1,63 @@
-# Medicinal Plants Database
+# This project is independently designed and developed.
 
-An AI-powered medicinal plant identification and database application built with React, TypeScript, and Supabase.
+## Project info
 
-## Features
+## How can I edit this code?
 
-- 🌿 **AI Plant Identification** - Upload or capture plant images for AI-powered identification
-- 🔍 **Advanced Search** - Search plants by name, scientific name, or in multiple languages (Hindi, Tamil, Telugu)
-- 📚 **Comprehensive Database** - Detailed medicinal plant information including uses, dosage, and precautions
-- 🌐 **Multilingual Support** - Search and view content in English, Hindi, Tamil, and Telugu
-- 🌙 **Dark/Light Mode** - Beautiful UI with theme support
-- 👤 **User Authentication** - Secure login and signup with role-based access
+There are several ways of editing your application.
 
-## Tech Stack
+**Use your preferred IDE**
 
-- **Frontend**: React 18, TypeScript, Vite
-- **Styling**: Tailwind CSS, shadcn/ui
-- **Backend**: Supabase (Database, Auth, Edge Functions, Storage)
-- **AI**: Lovable AI Gateway (Gemini 2.5 Flash for vision)
-- **Animation**: Framer Motion
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-## Local Development Setup
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-### Prerequisites
+Follow these steps:
 
-- Node.js 18+ or Bun
-- A Supabase project (or use the existing Lovable Cloud backend)
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-### Installation
+# Step 2: Navigate to the project directory.
+cd <ayurfind-india>
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd <project-folder>
-   ```
+# Step 3: Install the necessary dependencies.
+npm i
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   bun install
-   ```
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
+```
 
-3. **Set up environment variables**
-   
-   Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Fill in your Supabase credentials in `.env`:
-   ```
-   VITE_SUPABASE_URL="https://your-project.supabase.co"
-   VITE_SUPABASE_PROJECT_ID="your-project-id"
-   VITE_SUPABASE_PUBLISHABLE_KEY="your-anon-key"
-   ```
+**Edit a file directly in GitHub**
 
-4. **Start the development server**
-   ```bash
-   npm run dev
-   # or
-   bun dev
-   ```
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-5. **Open in browser**
-   
-   Navigate to `http://localhost:5173`
+**Use GitHub Codespaces**
 
-### Edge Functions
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-The project uses Supabase Edge Functions for AI plant identification. These are automatically deployed when using Lovable Cloud.
+## What technologies are used for this project?
 
-If you're self-hosting, you'll need to:
-1. Set up the `LOVABLE_API_KEY` secret in your Supabase project
-2. Deploy the edge functions using Supabase CLI:
-   ```bash
-   supabase functions deploy identify-plant
-   ```
+This project is built with:
+
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+## How can I deploy this project?
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+---
+Built by Anas Aiman
 
 ## Project Structure
 
