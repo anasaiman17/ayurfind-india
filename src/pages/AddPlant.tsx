@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { plantsApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -42,9 +42,7 @@ const AddPlant = () => {
   const navigate = useNavigate();
   const { user, isAdmin, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -61,7 +59,8 @@ const AddPlant = () => {
     precautions: '',
     dosage: '',
     regionAvailability: [] as string[],
-    medicineCategory: 'Ayurveda'
+    medicineCategory: 'Ayurveda',
+    imageUrl: ''
   });
 
   // Redirect non-admins
@@ -88,7 +87,7 @@ const AddPlant = () => {
     );
   }
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -96,68 +95,28 @@ const AddPlant = () => {
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid file type",
-        description: "Please upload an image file (JPG, PNG, etc.)",
+        description: "Please select an image file (JPG, PNG, etc.)",
         variant: "destructive"
       });
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Show preview
+    // Show preview (but note: local backend doesn't support file uploads yet)
     const reader = new FileReader();
     reader.onload = (event) => {
       setImagePreview(event.target?.result as string);
     };
     reader.readAsDataURL(file);
 
-    // Upload to storage
-    setIsUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `plants/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('plant-images')
-        .upload(filePath, file);
-
-      if (error) throw error;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('plant-images')
-        .getPublicUrl(filePath);
-
-      setUploadedImageUrl(urlData.publicUrl);
-      toast({
-        title: "Image uploaded",
-        description: "Plant image uploaded successfully"
-      });
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload image. Please try again.",
-        variant: "destructive"
-      });
-      setImagePreview(null);
-    } finally {
-      setIsUploading(false);
-    }
+    toast({
+      title: "Image Preview",
+      description: "Note: For now, please use an image URL instead. File upload storage is not yet implemented.",
+    });
   };
 
   const removeImage = () => {
     setImagePreview(null);
-    setUploadedImageUrl(null);
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -192,28 +151,23 @@ const AddPlant = () => {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase
-        .from('plants')
-        .insert({
-          english_name: formData.englishName.trim(),
-          scientific_name: formData.scientificName.trim() || null,
-          hindi_name: formData.hindiName.trim() || null,
-          tamil_name: formData.tamilName.trim() || null,
-          telugu_name: formData.teluguName.trim() || null,
-          family: formData.family.trim() || null,
-          description: formData.description.trim(),
-          medicinal_uses: formData.medicinalUses.split('\n').filter(use => use.trim()),
-          parts_used: formData.partsUsed.split(',').map(p => p.trim()).filter(Boolean),
-          active_compounds: formData.activeCompounds.split(',').map(c => c.trim()).filter(Boolean),
-          precautions: formData.precautions.split('\n').filter(p => p.trim()),
-          dosage: formData.dosage.trim() || null,
-          image_url: uploadedImageUrl || null,
-          region_availability: formData.regionAvailability,
-          medicine_category: formData.medicineCategory,
-          created_by: user?.id,
-        })
-        .select()
-        .single();
+      const { data, error } = await plantsApi.create({
+        english_name: formData.englishName.trim(),
+        scientific_name: formData.scientificName.trim() || null,
+        hindi_name: formData.hindiName.trim() || null,
+        tamil_name: formData.tamilName.trim() || null,
+        telugu_name: formData.teluguName.trim() || null,
+        family: formData.family.trim() || null,
+        description: formData.description.trim(),
+        medicinal_uses: formData.medicinalUses.split('\n').filter(use => use.trim()),
+        parts_used: formData.partsUsed.split(',').map(p => p.trim()).filter(Boolean),
+        active_compounds: formData.activeCompounds.split(',').map(c => c.trim()).filter(Boolean),
+        precautions: formData.precautions.split('\n').filter(p => p.trim()),
+        dosage: formData.dosage.trim() || null,
+        image_url: formData.imageUrl || null,
+        region_availability: formData.regionAvailability,
+        medicine_category: formData.medicineCategory,
+      });
 
       if (error) throw error;
 
@@ -227,7 +181,7 @@ const AddPlant = () => {
       console.error('Error adding plant:', error);
       toast({
         title: "Error Adding Plant",
-        description: "Failed to add plant to database. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to add plant to database. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -266,43 +220,41 @@ const AddPlant = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Step 1: Plant Image Upload */}
+              {/* Step 1: Plant Image */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg nature-gradient flex items-center justify-center">
                       <Image className="w-4 h-4 text-primary-foreground" />
                     </div>
-                    Step 1: Upload Plant Image
+                    Step 1: Plant Image
                   </CardTitle>
-                  <CardDescription>Upload a clear image of the plant (max 5MB)</CardDescription>
+                  <CardDescription>Provide an image URL for the plant</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    id="plant-image"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="imageUrl">Image URL</Label>
+                    <Input
+                      id="imageUrl"
+                      placeholder="https://example.com/plant-image.jpg"
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter a direct URL to an image of the plant
+                    </p>
+                  </div>
                   
-                  {!imagePreview ? (
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-accent/50 transition-colors"
-                    >
-                      <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground mb-2">Click to upload plant image</p>
-                      <p className="text-xs text-muted-foreground">JPG, PNG, WEBP up to 5MB</p>
-                    </div>
-                  ) : (
+                  {formData.imageUrl && (
                     <div className="relative max-w-sm">
                       <div className="rounded-lg overflow-hidden border border-border">
                         <img 
-                          src={imagePreview} 
+                          src={formData.imageUrl} 
                           alt="Plant preview" 
                           className="w-full h-48 object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.svg';
+                          }}
                         />
                       </div>
                       <Button
@@ -311,20 +263,9 @@ const AddPlant = () => {
                         size="icon"
                         className="absolute -top-2 -right-2 h-8 w-8"
                         onClick={removeImage}
-                        disabled={isUploading}
                       >
                         <X className="w-4 h-4" />
                       </Button>
-                      {isUploading && (
-                        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-                        </div>
-                      )}
-                      {uploadedImageUrl && !isUploading && (
-                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                          ✓ Image uploaded successfully
-                        </p>
-                      )}
                     </div>
                   )}
                 </CardContent>
@@ -462,7 +403,7 @@ const AddPlant = () => {
                     </div>
                     Step 4: Medicinal Information
                   </CardTitle>
-                  <CardDescription>Add medicinal uses and other details</CardDescription>
+                  <CardDescription>Enter the medicinal properties and uses of the plant</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -472,10 +413,11 @@ const AddPlant = () => {
                       placeholder="Describe the plant and its characteristics..."
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={3}
+                      rows={4}
                       required
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="medicinalUses">Medicinal Uses (one per line)</Label>
                     <Textarea
@@ -486,6 +428,7 @@ const AddPlant = () => {
                       rows={4}
                     />
                   </div>
+
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="partsUsed">Parts Used (comma separated)</Label>
@@ -506,6 +449,7 @@ const AddPlant = () => {
                       />
                     </div>
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="precautions">Precautions (one per line)</Label>
                     <Textarea
@@ -513,9 +457,10 @@ const AddPlant = () => {
                       placeholder="May affect blood clotting&#10;Not recommended during pregnancy"
                       value={formData.precautions}
                       onChange={(e) => setFormData({ ...formData, precautions: e.target.value })}
-                      rows={2}
+                      rows={3}
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="dosage">Dosage Recommendations</Label>
                     <Input
@@ -528,20 +473,32 @@ const AddPlant = () => {
                 </CardContent>
               </Card>
 
-              {/* Submit Button */}
-              <div className="flex gap-4 justify-end">
-                <Button type="button" variant="outline" onClick={() => navigate('/')} disabled={isSubmitting}>
+              {/* Submit */}
+              <div className="flex gap-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => navigate('/')} 
+                  className="flex-1"
+                  disabled={isSubmitting}
+                >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="nature-gradient gap-2 min-w-32" 
-                  disabled={isSubmitting || isUploading}
+                  className="flex-1 nature-gradient gap-2"
+                  disabled={isSubmitting}
                 >
                   {isSubmitting ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary-foreground"></div>
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary-foreground"></div>
+                      Saving...
+                    </>
                   ) : (
-                    <><Save className="w-4 h-4" /> Save Plant</>
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Plant
+                    </>
                   )}
                 </Button>
               </div>

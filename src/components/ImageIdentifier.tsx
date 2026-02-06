@@ -8,32 +8,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { PlantData } from '@/data/plantDatabase';
-import { supabase } from '@/integrations/supabase/client';
+import { identifyApi, PlantInfo } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 
 interface ImageIdentifierProps {
   onPlantIdentified: (plant: PlantData) => void;
-  plants: PlantData[]; // Plants from database for identification
+  plants: PlantData[];
 }
 
 interface IdentificationResult {
   plant: PlantData;
   confidence: number;
   matchedFeatures: string[];
-}
-
-interface AIMatch {
-  plantId: string;
-  confidence: number;
-  matchedFeatures: string[];
-  reasoning: string;
-}
-
-interface AIResponse {
-  matches: AIMatch[];
-  plantDetected: boolean;
-  imageQuality: 'good' | 'poor';
-  qualityIssues: string[];
 }
 
 const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) => {
@@ -123,12 +109,12 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
       setProcessingProgress(15);
       await new Promise(r => setTimeout(r, 300));
       
-      // Stage 2: Sending to AI
-      setProcessingStage('Sending to AI vision model...');
+      // Stage 2: Sending to API
+      setProcessingStage('Sending to identification service...');
       setProcessingProgress(30);
       
-      // Prepare plant data for the AI
-      const plantInfo = plants.map(p => ({
+      // Prepare plant data for the API
+      const plantInfo: PlantInfo[] = plants.map(p => ({
         id: p.id,
         englishName: p.commonNames.english,
         scientificName: p.scientificName,
@@ -136,33 +122,26 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
         description: p.description
       }));
       
-      // Call the edge function
-      const { data, error: fnError } = await supabase.functions.invoke('identify-plant', {
-        body: {
-          imageBase64: selectedImage,
-          plants: plantInfo
-        }
-      });
+      // Call the local API
+      const { data, error: apiError } = await identifyApi.identify(selectedImage, plantInfo);
       
-      if (fnError) {
-        throw new Error(fnError.message || 'Failed to identify plant');
+      if (apiError) {
+        throw new Error(apiError.message || 'Failed to identify plant');
       }
       
-      // Stage 3: Processing AI response
-      setProcessingStage('Processing AI analysis...');
+      // Stage 3: Processing response
+      setProcessingStage('Processing analysis...');
       setProcessingProgress(70);
       await new Promise(r => setTimeout(r, 200));
       
-      const aiResponse = data as AIResponse;
-      
-      // Set image quality from AI
-      setImageQuality(aiResponse.imageQuality || 'good');
-      if (aiResponse.qualityIssues?.length > 0) {
-        setQualityIssues(aiResponse.qualityIssues);
+      // Set image quality from response
+      setImageQuality(data?.imageQuality || 'good');
+      if (data?.qualityIssues?.length > 0) {
+        setQualityIssues(data.qualityIssues);
       }
       
       // Check if plant was detected
-      if (!aiResponse.plantDetected) {
+      if (!data?.plantDetected) {
         setError('No plant detected in the image. Please upload a clear image of a plant.');
         setProcessingProgress(100);
         setIsProcessing(false);
@@ -174,10 +153,10 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
       setProcessingProgress(85);
       await new Promise(r => setTimeout(r, 200));
       
-      // Map AI matches to plant data
+      // Map matches to plant data
       const identificationResults: IdentificationResult[] = [];
       
-      for (const match of aiResponse.matches || []) {
+      for (const match of data?.matches || []) {
         const plant = plants.find(p => p.id === match.plantId);
         if (plant) {
           identificationResults.push({
@@ -207,10 +186,8 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
       console.error('Identification error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to identify plant';
       
-      if (errorMessage.includes('Rate limit')) {
-        setError('Too many requests. Please wait a moment and try again.');
-      } else if (errorMessage.includes('credits')) {
-        setError('AI service temporarily unavailable. Please try again later.');
+      if (errorMessage.includes('fetch')) {
+        setError('Cannot connect to the backend server. Make sure the backend is running on http://localhost:5000');
       } else {
         setError(errorMessage);
       }
@@ -463,7 +440,7 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
                 </div>
                 <Progress value={processingProgress} className="h-2" />
                 <p className="text-sm text-muted-foreground text-center">
-                  Multi-stage AI analysis in progress...
+                  Processing image analysis...
                 </p>
               </motion.div>
             )}
@@ -496,84 +473,66 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
               </Button>
             </div>
 
-            <div className="space-y-3">
-              {results.map((result, index) => (
-                <motion.div
-                  key={result.plant.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  onClick={() => result.confidence >= 70 && onPlantIdentified(result.plant)}
-                  className={`glass-card p-4 rounded-xl flex items-center gap-4 transition-all ${
-                    result.confidence >= 70 
-                      ? 'cursor-pointer hover:shadow-medium hover:scale-[1.01]' 
-                      : 'opacity-70'
-                  }`}
-                >
-                  <div className="relative">
-                    <img
-                      src={result.plant.imageUrl}
+            {/* Mock Notice */}
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                <strong>Note:</strong> This is using mock identification. For real AI identification, 
+                integrate an AI API (e.g., Google Vision, OpenAI) in the backend.
+              </p>
+            </div>
+
+            {results.map((result, index) => (
+              <motion.div
+                key={result.plant.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => onPlantIdentified(result.plant)}
+                className="glass-card p-4 rounded-xl cursor-pointer hover:shadow-medium transition-all group"
+              >
+                <div className="flex gap-4">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
+                    <img 
+                      src={result.plant.imageUrl} 
                       alt={result.plant.commonNames.english}
-                      className="w-16 h-16 rounded-xl object-cover"
+                      className="w-full h-full object-cover"
                     />
-                    {index === 0 && result.confidence >= 70 && (
-                      <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full nature-gradient flex items-center justify-center">
-                        <CheckCircle2 className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-semibold group-hover:text-primary transition-colors">
+                          {result.plant.commonNames.english}
+                        </h4>
+                        <p className="text-sm text-muted-foreground italic">
+                          {result.plant.scientificName}
+                        </p>
+                      </div>
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        result.confidence >= 80 
+                          ? 'bg-primary/20 text-primary' 
+                          : result.confidence >= 50 
+                            ? 'bg-gold/20 text-gold' 
+                            : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {result.confidence}%
+                      </div>
+                    </div>
+                    
+                    {result.matchedFeatures.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {result.matchedFeatures.slice(0, 3).map((feature, i) => (
+                          <span key={i} className="px-2 py-0.5 rounded-full bg-secondary text-xs">
+                            {feature}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium truncate">
-                        {result.plant.commonNames.english}
-                      </h4>
-                      {result.confidence >= 70 && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                          Verified
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground italic truncate">
-                      {result.plant.scientificName}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {result.matchedFeatures.slice(0, 2).map((feature) => (
-                        <span key={feature} className="text-xs text-muted-foreground">
-                          • {feature}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <div className={`text-lg font-bold ${
-                      result.confidence >= 70 ? 'text-primary' : 'text-muted-foreground'
-                    }`}>
-                      {result.confidence.toFixed(1)}%
-                    </div>
-                    <p className="text-xs text-muted-foreground">Confidence</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {results[0].confidence < 70 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="p-4 rounded-xl bg-gold/10 border border-gold/20 flex items-start gap-3"
-              >
-                <AlertCircle className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium text-accent-foreground">Low Confidence Results</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    The confidence level is below our verification threshold. 
-                    Please try uploading a clearer image with better lighting and focus.
-                  </p>
                 </div>
               </motion.div>
-            )}
+            ))}
           </motion.div>
         )}
       </AnimatePresence>

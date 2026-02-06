@@ -1,12 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { authApi, getToken, removeToken, User } from '@/lib/api';
 
 type AppRole = 'admin' | 'user';
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   role: AppRole | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -19,90 +17,82 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching role:', error);
-        return null;
-      }
-      return data?.role as AppRole | null;
-    } catch (err) {
-      console.error('Error fetching role:', err);
-      return null;
-    }
-  };
-
+  // Check for existing session on mount
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer role fetch to avoid deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id).then(setRole);
-          }, 0);
-        } else {
+    const checkSession = async () => {
+      const token = getToken();
+      
+      if (token) {
+        try {
+          const { data, error } = await authApi.getMe();
+          
+          if (data?.user && !error) {
+            setUser(data.user);
+            setRole(data.user.role);
+          } else {
+            // Token invalid, clear it
+            removeToken();
+            setUser(null);
+            setRole(null);
+          }
+        } catch (err) {
+          console.error('Session check failed:', err);
+          removeToken();
+          setUser(null);
           setRole(null);
         }
-        
-        setIsLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserRole(session.user.id).then(setRole);
       }
       
       setIsLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    checkSession();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error: error ? new Error(error.message) : null };
+    try {
+      const { data, error } = await authApi.login(email, password);
+      
+      if (error) {
+        return { error };
+      }
+      
+      if (data?.user) {
+        setUser(data.user);
+        setRole(data.user.role);
+      }
+      
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-    return { error: error ? new Error(error.message) : null };
+    try {
+      const { data, error } = await authApi.signup(email, password, fullName);
+      
+      if (error) {
+        return { error };
+      }
+      
+      if (data?.user) {
+        setUser(data.user);
+        setRole(data.user.role);
+      }
+      
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await authApi.logout();
+    setUser(null);
     setRole(null);
   };
 
@@ -110,14 +100,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
-        session,
+        session: null, // Kept for compatibility, not used
         role,
         isLoading,
         signIn,
         signUp,
         signOut,
         isAdmin: role === 'admin',
-      }}
+      } as AuthContextType & { session: null }}
     >
       {children}
     </AuthContext.Provider>
