@@ -3,17 +3,9 @@ import { motion } from 'framer-motion';
 import { Shield, Users, Leaf, Eye, EyeOff, ChevronDown, ChevronUp, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { usersApi, UserProfile } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  created_at: string;
-  role: 'admin' | 'user';
-}
 
 const AdminPanel = ({ onClose }: { onClose: () => void }) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -27,28 +19,11 @@ const AdminPanel = ({ onClose }: { onClose: () => void }) => {
 
   const fetchUsers = async () => {
     try {
-      // Fetch profiles with their roles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
+      const { data, error } = await usersApi.getAll();
 
-      if (profilesError) throw profilesError;
+      if (error) throw error;
 
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*');
-
-      if (rolesError) throw rolesError;
-
-      const usersWithRoles = profiles?.map(profile => {
-        const userRole = roles?.find(r => r.user_id === profile.id);
-        return {
-          ...profile,
-          role: (userRole?.role as 'admin' | 'user') || 'user',
-        };
-      }) || [];
-
-      setUsers(usersWithRoles);
+      setUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -65,10 +40,7 @@ const AdminPanel = ({ onClose }: { onClose: () => void }) => {
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
     
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role: newRole })
-        .eq('user_id', userId);
+      const { error } = await usersApi.updateRole(userId, newRole);
 
       if (error) throw error;
 

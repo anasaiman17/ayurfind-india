@@ -1,0 +1,257 @@
+// Local API client for MedFind backend
+// This replaces the Supabase client
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// Token management
+const TOKEN_KEY = 'medfind_auth_token';
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function removeToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+// Generic fetch wrapper with auth
+async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<{ data: T | null; error: Error | null }> {
+  try {
+    const token = getToken();
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    };
+
+    if (token) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error(`API error (${endpoint}):`, error);
+    return { data: null, error: error as Error };
+  }
+}
+
+// Auth API
+export const authApi = {
+  async login(email: string, password: string) {
+    const result = await apiFetch<{ user: User; token: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (result.data?.token) {
+      setToken(result.data.token);
+    }
+
+    return result;
+  },
+
+  async signup(email: string, password: string, fullName?: string) {
+    const result = await apiFetch<{ user: User; token: string }>('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, fullName }),
+    });
+
+    if (result.data?.token) {
+      setToken(result.data.token);
+    }
+
+    return result;
+  },
+
+  async getMe() {
+    return apiFetch<{ user: User }>('/auth/me');
+  },
+
+  async logout() {
+    removeToken();
+    return { data: { message: 'Logged out' }, error: null };
+  },
+};
+
+// Plants API
+export const plantsApi = {
+  async getAll() {
+    return apiFetch<DbPlant[]>('/plants');
+  },
+
+  async getById(id: string) {
+    return apiFetch<DbPlant>(`/plants/${id}`);
+  },
+
+  async create(plant: PlantInsert) {
+    return apiFetch<DbPlant>('/plants', {
+      method: 'POST',
+      body: JSON.stringify(plant),
+    });
+  },
+
+  async update(id: string, plant: Partial<PlantInsert>) {
+    return apiFetch<DbPlant>(`/plants/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(plant),
+    });
+  },
+
+  async delete(id: string) {
+    return apiFetch<{ message: string }>(`/plants/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async search(query: string) {
+    return apiFetch<DbPlant[]>(`/plants/search/${encodeURIComponent(query)}`);
+  },
+};
+
+// Users API (admin only)
+export const usersApi = {
+  async getAll() {
+    return apiFetch<UserProfile[]>('/users');
+  },
+
+  async getProfiles() {
+    return apiFetch<Profile[]>('/users/profiles');
+  },
+
+  async getRoles() {
+    return apiFetch<UserRole[]>('/users/roles');
+  },
+
+  async updateRole(userId: string, role: 'admin' | 'user') {
+    return apiFetch<{ message: string }>(`/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+  },
+};
+
+// Plant Identification API
+export const identifyApi = {
+  async identify(imageBase64: string, plants: PlantInfo[]) {
+    return apiFetch<IdentifyResponse>('/identify', {
+      method: 'POST',
+      body: JSON.stringify({ imageBase64, plants }),
+    });
+  },
+};
+
+// Types
+export interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: 'admin' | 'user';
+  created_at?: string;
+}
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  created_at: string;
+}
+
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role: 'admin' | 'user';
+  created_at: string;
+}
+
+export interface UserProfile extends Profile {
+  role: 'admin' | 'user';
+}
+
+export interface DbPlant {
+  id: string;
+  english_name: string;
+  scientific_name: string | null;
+  hindi_name: string | null;
+  tamil_name: string | null;
+  telugu_name: string | null;
+  family: string | null;
+  description: string;
+  medicinal_uses: string[];
+  parts_used: string[];
+  active_compounds: string[];
+  precautions: string[];
+  dosage: string | null;
+  image_url: string | null;
+  region_availability: string[];
+  medicine_category: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlantInsert {
+  english_name: string;
+  scientific_name?: string | null;
+  hindi_name?: string | null;
+  tamil_name?: string | null;
+  telugu_name?: string | null;
+  family?: string | null;
+  description: string;
+  medicinal_uses?: string[];
+  parts_used?: string[];
+  active_compounds?: string[];
+  precautions?: string[];
+  dosage?: string | null;
+  image_url?: string | null;
+  region_availability?: string[];
+  medicine_category?: string | null;
+}
+
+export interface PlantInfo {
+  id: string;
+  englishName: string;
+  scientificName: string;
+  family: string;
+  description: string;
+}
+
+export interface IdentifyMatch {
+  plantId: string;
+  confidence: number;
+  matchedFeatures: string[];
+  reasoning: string;
+}
+
+export interface IdentifyResponse {
+  matches: IdentifyMatch[];
+  plantDetected: boolean;
+  imageQuality: 'good' | 'poor';
+  qualityIssues: string[];
+}
+
+// Health check
+export async function checkHealth() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}

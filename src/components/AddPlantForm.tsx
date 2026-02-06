@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { PlantData } from '@/data/plantDatabase';
-import { supabase } from '@/integrations/supabase/client';
+import { plantsApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AddPlantFormProps {
@@ -49,49 +49,43 @@ const AddPlantForm = ({ onPlantAdded, onClose }: AddPlantFormProps) => {
     setIsSubmitting(true);
 
     try {
-      // Save to database
-      const { data, error } = await supabase
-        .from('plants')
-        .insert({
-          english_name: formData.englishName,
-          scientific_name: formData.scientificName || null,
-          hindi_name: formData.hindiName || null,
-          tamil_name: formData.tamilName || null,
-          telugu_name: formData.teluguName || null,
-          family: formData.family || null,
-          description: formData.description,
-          medicinal_uses: formData.medicinalUses.split('\n').filter(use => use.trim()),
-          parts_used: formData.partsUsed.split(',').map(p => p.trim()).filter(Boolean),
-          active_compounds: formData.activeCompounds.split(',').map(c => c.trim()).filter(Boolean),
-          precautions: formData.precautions.split('\n').filter(p => p.trim()),
-          dosage: formData.dosage || null,
-          image_url: formData.imageUrl || null,
-          created_by: user?.id,
-        })
-        .select()
-        .single();
+      const { data, error } = await plantsApi.create({
+        english_name: formData.englishName,
+        scientific_name: formData.scientificName || null,
+        hindi_name: formData.hindiName || null,
+        tamil_name: formData.tamilName || null,
+        telugu_name: formData.teluguName || null,
+        family: formData.family || null,
+        description: formData.description,
+        medicinal_uses: formData.medicinalUses.split('\n').filter(use => use.trim()),
+        parts_used: formData.partsUsed.split(',').map(p => p.trim()).filter(Boolean),
+        active_compounds: formData.activeCompounds.split(',').map(c => c.trim()).filter(Boolean),
+        precautions: formData.precautions.split('\n').filter(p => p.trim()),
+        dosage: formData.dosage || null,
+        image_url: formData.imageUrl || null,
+      });
 
       if (error) throw error;
 
       const newPlant: PlantData = {
-        id: data.id,
-        scientificName: data.scientific_name || 'Unknown',
+        id: data!.id,
+        scientificName: data!.scientific_name || 'Unknown',
         commonNames: {
-          english: data.english_name,
-          hindi: data.hindi_name || undefined,
-          tamil: data.tamil_name || undefined,
-          telugu: data.telugu_name || undefined,
+          english: data!.english_name,
+          hindi: data!.hindi_name || undefined,
+          tamil: data!.tamil_name || undefined,
+          telugu: data!.telugu_name || undefined,
         },
-        family: data.family || 'Unknown',
-        description: data.description,
-        medicinalUses: data.medicinal_uses || [],
-        partsUsed: data.parts_used || [],
-        activeCompounds: data.active_compounds || [],
+        family: data!.family || 'Unknown',
+        description: data!.description,
+        medicinalUses: data!.medicinal_uses || [],
+        partsUsed: data!.parts_used || [],
+        activeCompounds: data!.active_compounds || [],
         traditionalSystems: ['Folk Medicine'],
         distribution: ['India'],
         habitat: 'Various regions',
-        imageUrl: data.image_url || '/placeholder.svg',
-        referenceImages: data.image_url ? [data.image_url] : ['/placeholder.svg'],
+        imageUrl: data!.image_url || '/placeholder.svg',
+        referenceImages: data!.image_url ? [data!.image_url] : ['/placeholder.svg'],
         botanicalFeatures: {
           leafShape: 'Not specified',
           leafTexture: 'Not specified',
@@ -99,8 +93,8 @@ const AddPlantForm = ({ onPlantAdded, onClose }: AddPlantFormProps) => {
           stemType: 'Not specified',
           height: 'Not specified'
         },
-        precautions: data.precautions || [],
-        dosage: data.dosage || 'Consult a healthcare provider',
+        precautions: data!.precautions || [],
+        dosage: data!.dosage || 'Consult a healthcare provider',
         source: 'User Contributed'
       };
 

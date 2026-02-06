@@ -14,8 +14,41 @@ import AdminPanel from '@/components/AdminPanel';
 import { medicinalPlants, searchPlants, PlantData } from '@/data/plantDatabase';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { plantsApi, DbPlant } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
+
+// Helper to convert DbPlant to PlantData
+const convertDbPlantToPlantData = (plant: DbPlant): PlantData => ({
+  id: plant.id,
+  scientificName: plant.scientific_name || 'Unknown',
+  commonNames: {
+    english: plant.english_name,
+    hindi: plant.hindi_name || undefined,
+    tamil: plant.tamil_name || undefined,
+    telugu: plant.telugu_name || undefined,
+  },
+  family: plant.family || 'Unknown',
+  description: plant.description,
+  medicinalUses: plant.medicinal_uses || [],
+  partsUsed: plant.parts_used || [],
+  activeCompounds: plant.active_compounds || [],
+  traditionalSystems: ['Folk Medicine'],
+  distribution: ['India'],
+  habitat: 'Various regions',
+  imageUrl: plant.image_url || '/placeholder.svg',
+  referenceImages: plant.image_url ? [plant.image_url] : ['/placeholder.svg'],
+  botanicalFeatures: {
+    leafShape: 'Not specified',
+    leafTexture: 'Not specified',
+    flowerColor: 'Not specified',
+    stemType: 'Not specified',
+    height: 'Not specified'
+  },
+  precautions: plant.precautions || [],
+  dosage: plant.dosage || 'Consult a healthcare provider',
+  source: 'User Contributed'
+});
+
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
@@ -37,53 +70,26 @@ const Index = () => {
   useEffect(() => {
     fetchDbPlants();
   }, []);
+
   const fetchDbPlants = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('plants').select('*').order('created_at', {
-        ascending: false
-      });
+      const { data, error } = await plantsApi.getAll();
+      
       if (error) throw error;
-      const convertedPlants: PlantData[] = (data || []).map(plant => ({
-        id: plant.id,
-        scientificName: plant.scientific_name || 'Unknown',
-        commonNames: {
-          english: plant.english_name,
-          hindi: plant.hindi_name || undefined,
-          tamil: plant.tamil_name || undefined,
-          telugu: plant.telugu_name || undefined
-        },
-        family: plant.family || 'Unknown',
-        description: plant.description,
-        medicinalUses: plant.medicinal_uses || [],
-        partsUsed: plant.parts_used || [],
-        activeCompounds: plant.active_compounds || [],
-        traditionalSystems: ['Folk Medicine'],
-        distribution: ['India'],
-        habitat: 'Various regions',
-        imageUrl: plant.image_url || '/placeholder.svg',
-        referenceImages: plant.image_url ? [plant.image_url] : ['/placeholder.svg'],
-        botanicalFeatures: {
-          leafShape: 'Not specified',
-          leafTexture: 'Not specified',
-          flowerColor: 'Not specified',
-          stemType: 'Not specified',
-          height: 'Not specified'
-        },
-        precautions: plant.precautions || [],
-        dosage: plant.dosage || 'Consult a healthcare provider',
-        source: 'User Contributed'
-      }));
+      
+      const convertedPlants: PlantData[] = (data || []).map(convertDbPlantToPlantData);
       setDbPlants(convertedPlants);
       const combined = [...medicinalPlants, ...convertedPlants];
       setAllPlants(combined);
       setSearchResults(combined);
     } catch (error) {
       console.error('Error fetching plants:', error);
+      // Still show static plants if API fails
+      setAllPlants(medicinalPlants);
+      setSearchResults(medicinalPlants);
     }
   };
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
@@ -91,17 +97,23 @@ const Index = () => {
     } else {
       const results = searchPlants(query);
       // Also search in db plants
-      const dbResults = dbPlants.filter(plant => plant.commonNames.english.toLowerCase().includes(query.toLowerCase()) || plant.scientificName.toLowerCase().includes(query.toLowerCase()) || plant.description.toLowerCase().includes(query.toLowerCase()));
+      const dbResults = dbPlants.filter(plant => 
+        plant.commonNames.english.toLowerCase().includes(query.toLowerCase()) || 
+        plant.scientificName.toLowerCase().includes(query.toLowerCase()) || 
+        plant.description.toLowerCase().includes(query.toLowerCase())
+      );
       const combined = [...results, ...dbResults.filter(cr => !results.find(r => r.id === cr.id))];
       setSearchResults(combined);
     }
     if (currentPage === 'home') setCurrentPage('search');
   };
+
   const handlePlantAdded = (plant: PlantData) => {
     setDbPlants(prev => [plant, ...prev]);
     setAllPlants(prev => [plant, ...prev]);
     setSearchResults(prev => [plant, ...prev]);
   };
+
   const handleAddPlantClick = () => {
     if (!user) {
       toast({
@@ -122,6 +134,7 @@ const Index = () => {
     }
     navigate('/add-plant');
   };
+
   const features = [{
     icon: Camera,
     title: 'AI Plant Identification',
@@ -139,29 +152,19 @@ const Index = () => {
     title: 'Traditional Medicine',
     desc: 'Ayurveda, Siddha & Folk medicine references'
   }];
-  return <div className="min-h-screen flex flex-col hero-gradient leaf-pattern">
+
+  return (
+    <div className="min-h-screen flex flex-col hero-gradient leaf-pattern">
       <Header onNavigate={setCurrentPage} currentPage={currentPage} onOpenAdmin={() => setShowAdminPanel(true)} />
       
       <main className="flex-1 pt-24 pb-8">
         <div className="container mx-auto px-4">
           {/* Home Page */}
-          {currentPage === 'home' && <motion.div initial={{
-          opacity: 0
-        }} animate={{
-          opacity: 1
-        }} className="space-y-16">
+          {currentPage === 'home' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-16">
               {/* Hero Section */}
               <section className="text-center py-12 space-y-8">
-                <motion.div initial={{
-              y: 20,
-              opacity: 0
-            }} animate={{
-              y: 0,
-              opacity: 1
-            }} transition={{
-              delay: 0.2
-            }}>
-                  
+                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
                   <h1 className="font-display text-4xl md:text-6xl font-bold text-foreground leading-tight">
                     Discover India's <br />
                     <span className="text-gradient-nature">Medicinal Plants</span>
@@ -169,29 +172,13 @@ const Index = () => {
                   <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">AI-powered identification system with scientifically verified data</p>
                 </motion.div>
 
-                <motion.div initial={{
-              y: 20,
-              opacity: 0
-            }} animate={{
-              y: 0,
-              opacity: 1
-            }} transition={{
-              delay: 0.4
-            }} className="flex items-center justify-center gap-4 flex-wrap">
+                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="flex items-center justify-center gap-4 flex-wrap">
                   <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} />
                 </motion.div>
 
                 <SearchBar onSearch={handleSearch} onPlantSelect={setSelectedPlant} />
 
-                <motion.div initial={{
-              y: 20,
-              opacity: 0
-            }} animate={{
-              y: 0,
-              opacity: 1
-            }} transition={{
-              delay: 0.6
-            }} className="flex flex-wrap justify-center gap-4">
+                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.6 }} className="flex flex-wrap justify-center gap-4">
                   <Button onClick={() => setCurrentPage('identify')} className="nature-gradient h-12 px-8 gap-2 shadow-soft">
                     <Camera className="w-5 h-5" /> Identify Plant
                   </Button>
@@ -234,30 +221,28 @@ const Index = () => {
                   </Button>
                 </div>
                 <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {allPlants.slice(0, 4).map((plant, i) => <PlantCard key={plant.id} plant={plant} index={i} onClick={() => setSelectedPlant(plant)} />)}
+                  {allPlants.slice(0, 4).map((plant, i) => (
+                    <PlantCard key={plant.id} plant={plant} index={i} onClick={() => setSelectedPlant(plant)} />
+                  ))}
                 </div>
               </section>
-            </motion.div>}
+            </motion.div>
+          )}
 
           {/* Identify Page */}
-          {currentPage === 'identify' && <motion.div initial={{
-          opacity: 0
-        }} animate={{
-          opacity: 1
-        }} className="max-w-2xl mx-auto space-y-8">
+          {currentPage === 'identify' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl mx-auto space-y-8">
               <div className="text-center">
                 <h1 className="font-display text-3xl font-bold mb-2">Plant Identification</h1>
                 <p className="text-muted-foreground">Upload or capture a plant image for AI-powered identification</p>
               </div>
               <ImageIdentifier onPlantIdentified={setSelectedPlant} plants={allPlants} />
-            </motion.div>}
+            </motion.div>
+          )}
 
           {/* Search/Database Page */}
-          {currentPage === 'search' && <motion.div initial={{
-          opacity: 0
-        }} animate={{
-          opacity: 1
-        }} className="space-y-8">
+          {currentPage === 'search' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
               <div className="text-center space-y-4">
                 <h1 className="font-display text-3xl font-bold">Medicinal Plant Database</h1>
                 <SearchBar onSearch={handleSearch} onPlantSelect={setSelectedPlant} />
@@ -272,25 +257,27 @@ const Index = () => {
                 </div>
               </div>
               <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {searchResults.map((plant, i) => <PlantCard key={plant.id} plant={plant} index={i} onClick={() => setSelectedPlant(plant)} />)}
+                {searchResults.map((plant, i) => (
+                  <PlantCard key={plant.id} plant={plant} index={i} onClick={() => setSelectedPlant(plant)} />
+                ))}
               </div>
-            </motion.div>}
+            </motion.div>
+          )}
 
           {/* About Page */}
-          {currentPage === 'about' && <motion.div initial={{
-          opacity: 0
-        }} animate={{
-          opacity: 1
-        }} className="max-w-3xl mx-auto space-y-8">
+          {currentPage === 'about' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl mx-auto space-y-8">
               <div className="text-center">
                 <h1 className="font-display text-3xl font-bold mb-4">About MedFind</h1>
-                <p className="text-muted-foreground">MedFind is a comprehensive medicinal plant identification system designed for academic research and real-world deployment. It features multi-stage deep learning analysis, multilingual search capabilities, and scientifically verified data sourced from the Botanical Survey of India.</p>
+                <p className="text-muted-foreground">MedFind is a comprehensive medicinal plant identification system designed for academic research and real-world deployment.</p>
               </div>
               <div className="glass-card p-8 space-y-6">
-                <p className="text-muted-foreground leading-relaxed">MedFind is a comprehensive medicinal plant identification system designed for academic research and real-world deployment. It features multi-stage deep learning analysis, multilingual search capabilities, and scientifically verified data sourced from the Botanical Survey of India.</p>
-                
+                <p className="text-muted-foreground leading-relaxed">
+                  MedFind features multi-stage deep learning analysis, multilingual search capabilities, and scientifically verified data sourced from the Botanical Survey of India.
+                </p>
               </div>
-            </motion.div>}
+            </motion.div>
+          )}
         </div>
       </main>
 
@@ -310,6 +297,8 @@ const Index = () => {
       <AnimatePresence>
         {showAdminPanel && isAdmin && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
       </AnimatePresence>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;

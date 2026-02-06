@@ -1,92 +1,139 @@
-# This project is independently designed and developed.
+# MedFind - Indian Medicinal Plants Database
 
-## Project info
+A comprehensive medicinal plant identification system with a fully local backend.
 
-## How can I edit this code?
+## Tech Stack
 
-There are several ways of editing your application.
+**Frontend:**
+- Vite + React + TypeScript
+- Tailwind CSS + shadcn/ui
+- Framer Motion for animations
 
-**Use your preferred IDE**
+**Backend:**
+- Node.js + Express.js
+- SQLite (better-sqlite3)
+- JWT authentication with bcrypt
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Quick Start
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 1. Install Frontend Dependencies
 
-Follow these steps:
+```bash
+npm install
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 2. Install Backend Dependencies
 
-# Step 2: Navigate to the project directory.
-cd <ayurfind-india>
+```bash
+cd backend
+npm install
+cd ..
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 3. Start the Backend Server
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+cd backend
+npm start
+```
+
+The backend will run at `http://localhost:5000`
+
+### 4. Start the Frontend Development Server
+
+In a new terminal:
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The frontend will run at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Default Admin Credentials
 
-**Use GitHub Codespaces**
+- **Email:** mohammedanasaiman17@gmail.com
+- **Password:** anas@123
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## API Endpoints
 
-## What technologies are used for this project?
+### Authentication
+- `POST /api/auth/signup` - Register new user
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user
+- `POST /api/auth/logout` - Logout
 
-This project is built with:
+### Plants
+- `GET /api/plants` - Get all plants
+- `GET /api/plants/:id` - Get single plant
+- `POST /api/plants` - Create plant (admin only)
+- `PUT /api/plants/:id` - Update plant (admin only)
+- `DELETE /api/plants/:id` - Delete plant (admin only)
+- `GET /api/plants/search/:query` - Search plants
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Users (Admin only)
+- `GET /api/users` - Get all users
+- `PUT /api/users/:id/role` - Update user role
 
-## How can I deploy this project?
+### Plant Identification
+- `POST /api/identify` - Identify plant (mock response)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Database
 
----
-Built by Anas Aiman
+The SQLite database is stored at `backend/data/medfind.db`
+
+### Tables
+- `profiles` - User accounts
+- `user_roles` - User roles (admin/user)
+- `plants` - Medicinal plant data
+
+## Features
+
+- 🌿 Browse medicinal plants database
+- 🔍 Search by name, scientific name, or description
+- 📷 Plant identification (mock - integrate AI API for real identification)
+- 🔐 JWT-based authentication
+- 👤 Admin panel for user management
+- ➕ Add new plants (admin only)
+- 🌙 Dark/Light theme support
+- 🌐 Multilingual plant names (Hindi, Tamil, Telugu)
+
+## Notes
+
+- The plant identification feature returns mock results. To enable real AI identification, integrate an AI vision API (e.g., Google Vision, OpenAI Vision) in `backend/routes/identify.js`
+- File uploads are not yet implemented - use image URLs instead
+- The database is seeded with sample plants on first run
 
 ## Project Structure
 
-supabase/
-├── functions/          # Edge functions
-│   └── identify-plant/ # AI plant identification
-├── migrations/         # Database migrations
-└── config.toml         # Supabase configuration
 ```
-
-## Database Schema
-
-### Tables
-
-- **plants** - Medicinal plant data with multilingual names, uses, and precautions
-- **profiles** - User profile information
-- **user_roles** - Role-based access control (admin/user)
-
-### Storage
-
-- **plant-images** - Public bucket for plant images
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+├── backend/
+│   ├── data/              # SQLite database
+│   ├── db/
+│   │   └── init.js        # Database initialization
+│   ├── middleware/
+│   │   └── auth.js        # JWT authentication middleware
+│   ├── routes/
+│   │   ├── auth.js        # Authentication routes
+│   │   ├── plants.js      # Plant CRUD routes
+│   │   ├── users.js       # User management routes
+│   │   └── identify.js    # Plant identification route
+│   ├── index.js           # Express server
+│   └── package.json
+├── src/
+│   ├── components/        # React components
+│   ├── contexts/          # React contexts (Auth)
+│   ├── data/              # Static plant data
+│   ├── hooks/             # Custom hooks
+│   ├── lib/
+│   │   └── api.ts         # API client
+│   └── pages/             # Page components
+└── package.json
+```
 
 ## License
 
 MIT License
+
+---
+
+Built by Anas Aiman
