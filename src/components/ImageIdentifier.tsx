@@ -8,7 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { PlantData } from '@/data/plantDatabase';
-import { identifyApi, PlantInfo } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 interface ImageIdentifierProps {
@@ -105,93 +105,121 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
     
     try {
       // Stage 1: Preparing image
-      setProcessingStage('Preparing image for analysis...');
+      setProcessingStage('Preparing image for AI analysis...');
       setProcessingProgress(15);
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 200));
       
-      // Stage 2: Sending to API
-      setProcessingStage('Sending to identification service...');
+      // Stage 2: Sending to AI
+      setProcessingStage('Analyzing with AI vision model...');
       setProcessingProgress(30);
       
-      // Prepare plant data for the API
-      const plantInfo: PlantInfo[] = plants.map(p => ({
-        id: p.id,
-        englishName: p.commonNames.english,
-        scientificName: p.scientificName,
-        family: p.family,
-        description: p.description
-      }));
+      const plantNames = plants.map(p => p.commonNames.english);
       
-      // Call the local API
-      const { data, error: apiError } = await identifyApi.identify(selectedImage, plantInfo);
+      const { data, error: fnError } = await supabase.functions.invoke('identify-plant', {
+        body: { imageBase64: selectedImage, plantNames },
+      });
       
-      if (apiError) {
-        throw new Error(apiError.message || 'Failed to identify plant');
-      }
+      if (fnError) throw new Error(fnError.message || 'AI identification failed');
+      if (data?.error) throw new Error(data.error);
       
-      // Stage 3: Processing response
-      setProcessingStage('Processing analysis...');
+      // Stage 3: Processing AI response
+      setProcessingStage('Processing AI analysis...');
       setProcessingProgress(70);
       await new Promise(r => setTimeout(r, 200));
       
-      // Set image quality from response
-      setImageQuality(data?.imageQuality || 'good');
-      if (data?.qualityIssues?.length > 0) {
-        setQualityIssues(data.qualityIssues);
-      }
-      
-      // Check if plant was detected
-      if (!data?.plantDetected) {
-        setError('No plant detected in the image. Please upload a clear image of a plant.');
+      if (!data?.identified) {
+        setError('Could not identify a plant in this image. Please try a clearer image of the plant leaves, flowers, or overall structure.');
+        setImageQuality('poor');
         setProcessingProgress(100);
         setIsProcessing(false);
         return;
       }
+      
+      setImageQuality(data.confidence >= 60 ? 'good' : 'poor');
       
       // Stage 4: Matching with database
       setProcessingStage('Matching with plant database...');
       setProcessingProgress(85);
       await new Promise(r => setTimeout(r, 200));
       
-      // Map matches to plant data
+      // Try to find the identified plant in our database
       const identificationResults: IdentificationResult[] = [];
+      const identifiedName = (data.plantName || '').toLowerCase();
+      const identifiedScientific = (data.scientificName || '').toLowerCase();
       
-      for (const match of data?.matches || []) {
-        const plant = plants.find(p => p.id === match.plantId);
-        if (plant) {
-          identificationResults.push({
-            plant,
-            confidence: match.confidence,
-            matchedFeatures: match.matchedFeatures || []
-          });
+      // Find best match in our plants
+      const matchedPlant = plants.find(p => 
+        p.commonNames.english.toLowerCase() === identifiedName ||
+        p.scientificName.toLowerCase() === identifiedScientific ||
+        p.commonNames.english.toLowerCase().includes(identifiedName) ||
+        identifiedName.includes(p.commonNames.english.toLowerCase())
+      );
+      
+      if (matchedPlant) {
+        identificationResults.push({
+          plant: matchedPlant,
+          confidence: data.confidence || 75,
+          matchedFeatures: data.matchedFeatures || ['AI Vision Analysis'],
+        });
+      } else {
+        // Create a temporary plant entry from AI response
+        const aiPlant: PlantData = {
+          id: 'ai-identified-' + Date.now(),
+          scientificName: data.scientificName || 'Unknown',
+          commonNames: { english: data.plantName || 'Unknown Plant' },
+          family: 'Identified by AI',
+          description: data.reasoning || 'Identified by AI vision analysis',
+          medicinalUses: [],
+          partsUsed: [],
+          activeCompounds: [],
+          traditionalSystems: [],
+          distribution: [],
+          habitat: 'Unknown',
+          imageUrl: selectedImage,
+          referenceImages: [selectedImage],
+          botanicalFeatures: { leafShape: 'See image', leafTexture: '', flowerColor: '', stemType: '', height: '' },
+          precautions: [],
+          dosage: 'Consult a healthcare provider',
+          source: 'AI Identification',
+        };
+        identificationResults.push({
+          plant: aiPlant,
+          confidence: data.confidence || 50,
+          matchedFeatures: data.matchedFeatures || ['AI Vision Analysis'],
+        });
+      }
+      
+      // Add suggestions as lower-confidence matches
+      if (data.suggestions?.length > 0) {
+        for (const suggestion of data.suggestions.slice(0, 2)) {
+          const sugPlant = plants.find(p => 
+            p.commonNames.english.toLowerCase().includes(suggestion.toLowerCase()) ||
+            suggestion.toLowerCase().includes(p.commonNames.english.toLowerCase())
+          );
+          if (sugPlant && !identificationResults.find(r => r.plant.id === sugPlant.id)) {
+            identificationResults.push({
+              plant: sugPlant,
+              confidence: Math.max(20, (data.confidence || 50) - 30),
+              matchedFeatures: ['Suggested alternative'],
+            });
+          }
         }
       }
       
-      // Sort by confidence
-      identificationResults.sort((a, b) => b.confidence - a.confidence);
-      
-      // Stage 5: Finalizing
-      setProcessingStage('Generating results...');
-      setProcessingProgress(95);
-      await new Promise(r => setTimeout(r, 200));
+      // Stage 5: Done
+      setProcessingStage('Complete!');
+      setProcessingProgress(100);
+      await new Promise(r => setTimeout(r, 150));
       
       if (identificationResults.length === 0) {
-        setError('Could not match the plant to any in our database. Try a different image or angle.');
+        setError('Could not match the plant to any in our database. The AI detected: ' + (data.plantName || 'unknown plant'));
       } else {
         setResults(identificationResults.slice(0, 3));
       }
-      
-      setProcessingProgress(100);
     } catch (err) {
       console.error('Identification error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to identify plant';
-      
-      if (errorMessage.includes('fetch')) {
-        setError('Cannot connect to the backend server. Make sure the backend is running on http://localhost:5000');
-      } else {
-        setError(errorMessage);
-      }
-      
+      setError(errorMessage);
       toast({
         title: 'Identification Error',
         description: errorMessage,
@@ -473,13 +501,7 @@ const ImageIdentifier = ({ onPlantIdentified, plants }: ImageIdentifierProps) =>
               </Button>
             </div>
 
-            {/* Mock Notice */}
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <p className="text-xs text-amber-700 dark:text-amber-300">
-                <strong>Note:</strong> This is using mock identification. For real AI identification, 
-                integrate an AI API (e.g., Google Vision, OpenAI) in the backend.
-              </p>
-            </div>
+            {/* AI-powered identification */}
 
             {results.map((result, index) => (
               <motion.div

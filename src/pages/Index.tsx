@@ -78,15 +78,37 @@ const Index = () => {
       if (error) throw error;
       
       const convertedPlants: PlantData[] = (data || []).map(convertDbPlantToPlantData);
-      setDbPlants(convertedPlants);
-      const combined = [...medicinalPlants, ...convertedPlants];
+      
+      // Also load locally stored plants from localStorage
+      const localStored = localStorage.getItem('medfind_local_plants');
+      const localPlants: PlantData[] = localStored 
+        ? JSON.parse(localStored).map(convertDbPlantToPlantData) 
+        : [];
+      
+      const allDbPlants = [...convertedPlants, ...localPlants];
+      setDbPlants(allDbPlants);
+      
+      // Deduplicate by id
+      const combinedMap = new Map<string, PlantData>();
+      medicinalPlants.forEach(p => combinedMap.set(p.id, p));
+      allDbPlants.forEach(p => combinedMap.set(p.id, p));
+      const combined = Array.from(combinedMap.values());
+      
       setAllPlants(combined);
       setSearchResults(combined);
     } catch (error) {
       console.error('Error fetching plants:', error);
-      // Still show static plants if API fails
-      setAllPlants(medicinalPlants);
-      setSearchResults(medicinalPlants);
+      // Still show static plants + local plants if API fails
+      const localStored = localStorage.getItem('medfind_local_plants');
+      const localPlants: PlantData[] = localStored 
+        ? JSON.parse(localStored).map(convertDbPlantToPlantData) 
+        : [];
+      const combinedMap = new Map<string, PlantData>();
+      medicinalPlants.forEach(p => combinedMap.set(p.id, p));
+      localPlants.forEach(p => combinedMap.set(p.id, p));
+      const combined = Array.from(combinedMap.values());
+      setAllPlants(combined);
+      setSearchResults(combined);
     }
   };
 
