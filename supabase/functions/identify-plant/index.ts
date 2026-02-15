@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -42,15 +42,19 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 If you cannot identify the plant or it's not a plant image, set "identified" to false and confidence to 0.
 Be honest about confidence levels. Only give high confidence (>80) if you're quite sure.`;
 
-    // Clean the base64 - remove data URL prefix if present
+    // Clean the base64
     const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
 
-    // Use Lovable AI gateway
-    const response = await fetch("https://gateway.lovable.dev/v1/chat/completions", {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
@@ -76,6 +80,20 @@ Be honest about confidence levels. Only give high confidence (>80) if you're qui
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI API error:", response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       throw new Error(`AI API error: ${response.status}`);
     }
 
@@ -84,7 +102,6 @@ Be honest about confidence levels. Only give high confidence (>80) if you're qui
     
     console.log("AI raw response:", textContent);
 
-    // Parse the JSON response from AI
     let identification;
     try {
       const jsonMatch = textContent.match(/\{[\s\S]*\}/);
