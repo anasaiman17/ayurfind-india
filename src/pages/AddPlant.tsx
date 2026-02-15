@@ -91,27 +91,31 @@ const AddPlant = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid file type",
-        description: "Please select an image file (JPG, PNG, etc.)",
+        description: "Please select an image file (JPG, PNG, WebP)",
         variant: "destructive"
       });
       return;
     }
 
-    // Show preview (but note: local backend doesn't support file uploads yet)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image under 5MB.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
-      setImagePreview(event.target?.result as string);
+      const dataUrl = event.target?.result as string;
+      setImagePreview(dataUrl);
+      setFormData(prev => ({ ...prev, imageUrl: dataUrl }));
     };
     reader.readAsDataURL(file);
-
-    toast({
-      title: "Image Preview",
-      description: "Note: For now, please use an image URL instead. File upload storage is not yet implemented.",
-    });
   };
 
   const removeImage = () => {
@@ -229,45 +233,46 @@ const AddPlant = () => {
                     </div>
                     Step 1: Plant Image
                   </CardTitle>
-                  <CardDescription>Provide an image URL for the plant</CardDescription>
+                  <CardDescription>Upload an image of the plant</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="imageUrl">Image URL</Label>
-                    <Input
-                      id="imageUrl"
-                      placeholder="https://example.com/plant-image.jpg"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Enter a direct URL to an image of the plant
-                    </p>
-                  </div>
-                  
-                  {formData.imageUrl && (
-                    <div className="relative max-w-sm">
-                      <div className="rounded-lg overflow-hidden border border-border">
-                        <img 
-                          src={formData.imageUrl} 
-                          alt="Plant preview" 
-                          className="w-full h-48 object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/placeholder.svg';
-                          }}
-                        />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                  >
+                    {imagePreview ? (
+                      <div className="space-y-3">
+                        <div className="relative max-w-sm mx-auto">
+                          <img src={imagePreview} alt="Plant preview" className="w-full h-48 object-cover rounded-lg" />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-8 w-8"
+                            onClick={(e) => { e.stopPropagation(); removeImage(); }}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Click to change image</p>
                       </div>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-8 w-8"
-                        onClick={removeImage}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="space-y-3">
+                        <Upload className="w-10 h-10 mx-auto text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Click to upload plant image</p>
+                          <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP up to 5MB</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
                 </CardContent>
               </Card>
 
