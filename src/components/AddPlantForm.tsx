@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Image, Leaf, Pill, Save, X } from 'lucide-react';
+import { Plus, Image, Leaf, Pill, Save, X, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +18,9 @@ interface AddPlantFormProps {
 const AddPlantForm = ({ onPlantAdded, onClose }: AddPlantFormProps) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageMode, setImageMode] = useState<'url' | 'upload'>('upload');
+  const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     englishName: '',
     hindiName: '',
@@ -33,6 +36,22 @@ const AddPlantForm = ({ onPlantAdded, onClose }: AddPlantFormProps) => {
     precautions: '',
     dosage: '',
   });
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Please select an image under 5MB.', variant: 'destructive' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setUploadedImagePreview(dataUrl);
+      setFormData(prev => ({ ...prev, imageUrl: dataUrl }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,31 +166,78 @@ const AddPlantForm = ({ onPlantAdded, onClose }: AddPlantFormProps) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Image Section */}
           <div className="glass-card p-4 rounded-xl space-y-4">
-            <div className="flex items-center gap-2 text-primary">
-              <Image className="w-5 h-5" />
-              <h3 className="font-semibold">Plant Image</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary">
+                <Image className="w-5 h-5" />
+                <h3 className="font-semibold">Plant Image</h3>
+              </div>
+              <div className="flex gap-1 rounded-lg bg-secondary p-1">
+                <button
+                  type="button"
+                  onClick={() => { setImageMode('upload'); setFormData(prev => ({ ...prev, imageUrl: uploadedImagePreview || '' })); }}
+                  className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${imageMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <Upload className="w-3 h-3 inline mr-1" />Upload
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setImageMode('url'); setUploadedImagePreview(null); setFormData(prev => ({ ...prev, imageUrl: '' })); }}
+                  className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${imageMode === 'url' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  URL
+                </button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <Input
-                id="imageUrl"
-                placeholder="https://example.com/plant-image.jpg"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              />
-              {formData.imageUrl && (
-                <div className="mt-2 rounded-lg overflow-hidden border border-border">
-                  <img 
-                    src={formData.imageUrl} 
-                    alt="Plant preview" 
-                    className="w-full h-40 object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/placeholder.svg';
-                    }}
-                  />
+
+            {imageMode === 'upload' ? (
+              <div className="space-y-2">
+                <Label>Upload Image</Label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                >
+                  {uploadedImagePreview ? (
+                    <div className="space-y-2">
+                      <img src={uploadedImagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                      <p className="text-xs text-muted-foreground">Click to change image</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Click to upload plant image</p>
+                      <p className="text-xs text-muted-foreground">JPG, PNG, WebP up to 5MB</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="imageUrl">Image URL</Label>
+                <Input
+                  id="imageUrl"
+                  placeholder="https://example.com/plant-image.jpg"
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                />
+                {formData.imageUrl && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-border">
+                    <img
+                      src={formData.imageUrl}
+                      alt="Plant preview"
+                      className="w-full h-40 object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Name Section */}
