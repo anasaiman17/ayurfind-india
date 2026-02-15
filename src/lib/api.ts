@@ -189,10 +189,43 @@ export const plantsApi = {
   },
 
   async create(plant: PlantInsert) {
-    return apiFetch<DbPlant>('/plants', {
-      method: 'POST',
-      body: JSON.stringify(plant),
-    });
+    const online = await isBackendAvailable();
+    if (online) {
+      return apiFetch<DbPlant>('/plants', {
+        method: 'POST',
+        body: JSON.stringify(plant),
+      });
+    }
+
+    // Local fallback: store in localStorage
+    const newPlant: DbPlant = {
+      id: 'local-plant-' + Date.now(),
+      english_name: plant.english_name,
+      scientific_name: plant.scientific_name || null,
+      hindi_name: plant.hindi_name || null,
+      tamil_name: plant.tamil_name || null,
+      telugu_name: plant.telugu_name || null,
+      family: plant.family || null,
+      description: plant.description,
+      medicinal_uses: plant.medicinal_uses || [],
+      parts_used: plant.parts_used || [],
+      active_compounds: plant.active_compounds || [],
+      precautions: plant.precautions || [],
+      dosage: plant.dosage || null,
+      image_url: plant.image_url || null,
+      region_availability: plant.region_availability || [],
+      medicine_category: plant.medicine_category || null,
+      created_by: getLocalUser()?.id || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const stored = localStorage.getItem('medfind_local_plants');
+    const localPlants: DbPlant[] = stored ? JSON.parse(stored) : [];
+    localPlants.push(newPlant);
+    localStorage.setItem('medfind_local_plants', JSON.stringify(localPlants));
+
+    return { data: newPlant, error: null };
   },
 
   async update(id: string, plant: Partial<PlantInsert>) {
