@@ -1,4 +1,5 @@
-import { Leaf, Heart, ExternalLink } from 'lucide-react';
+import { Leaf, Heart, ExternalLink, FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 const Footer = () => {
   return <footer className="mt-auto border-t border-border/50 bg-card/50 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-8">
@@ -25,7 +26,10 @@ const Footer = () => {
             <h4 className="font-display font-semibold">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                
+                <Link to="/project-report" className="flex items-center gap-2 hover:text-foreground transition-colors">
+                  <FileText className="w-4 h-4" />
+                  Project Report (PDF)
+                </Link>
               </li>
               <li className="flex items-center gap-2">
                 <Leaf className="w-4 h-4" />
