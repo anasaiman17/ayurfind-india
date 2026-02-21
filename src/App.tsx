@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import AdminLogin from "./pages/AdminLogin";
 import AddPlant from "./pages/AddPlant";
+import ProjectReport from "./pages/ProjectReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/admin-login" element={<AdminLogin />} />
               <Route path="/add-plant" element={<AddPlant />} />
+              <Route path="/project-report" element={<ProjectReport />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
